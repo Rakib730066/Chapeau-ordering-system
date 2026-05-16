@@ -1,4 +1,4 @@
-﻿using Chapeau_ordering_system.Models;
+using Chapeau_ordering_system.Models;
 using Chapeau_ordering_system.Repositories.Interfaces;
 using Chapeau_ordering_system.Services.Interfaces;
 
@@ -15,34 +15,18 @@ namespace Chapeau_ordering_system.Services
 
         public Employee? Login(string username, string password)
         {
-            Employee? employee = _employeeRepository.GetByUsername(username);
-
-            if (employee == null)
+            var employee = _employeeRepository.GetByUsername(username);
+            if (employee == null || string.IsNullOrWhiteSpace(employee.PasswordHash))
                 return null;
 
-            // Guard against missing or invalid password hashes in the database.
-            if (string.IsNullOrWhiteSpace(employee.PasswordHash))
-            {
-                // Treat missing hash as authentication failure.
-                return null;
-            }
-
-            bool passwordIsCorrect;
             try
             {
-                passwordIsCorrect = BCrypt.Net.BCrypt.Verify(password, employee.PasswordHash);
+                return BCrypt.Net.BCrypt.Verify(password, employee.PasswordHash) ? employee : null;
             }
-            catch (ArgumentException)
+            catch (Exception)
             {
-                // BCrypt throws ArgumentException when the stored hash/salt is invalid or empty.
-                // Treat this as authentication failure rather than crashing the app.
                 return null;
             }
-
-            if (!passwordIsCorrect)
-                return null;
-
-            return employee;
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿@model Chapeau_ordering_system.ViewModels.LoginViewModel
+@model Chapeau_ordering_system.ViewModels.LoginViewModel
 
 @{
     ViewData["Title"] = "Login";
@@ -6,7 +6,6 @@
 
 <div class="row justify-content-center mt-5">
     <div class="col-md-4">
-
         <div class="text-center mb-4">
             <h2>Chapeau Restaurant</h2>
             <p class="text-muted">Please log in to continue</p>
@@ -17,14 +16,16 @@
                 <h4 class="card-title text-center mb-4">Employee Login</h4>
 
                 <form asp-action="Login" method="post">
-
-                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" style="display:none" id="validation-summary"></div>
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-3"></div>
+                    }
 
                     <div class="mb-3">
                         <label asp-for="Username" class="form-label fw-semibold"></label>
                         <input asp-for="Username"
                                class="form-control"
-                               placeholder="Enter your username"
+                               placeholder="Enter your username or employee number"
                                autocomplete="username" />
                         <span asp-validation-for="Username" class="text-danger small"></span>
                     </div>
@@ -43,19 +44,5 @@
                 </form>
             </div>
         </div>
-
     </div>
 </div>
-
-@section Scripts {
-    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
-}
-
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        var summary = document.getElementById("validation-summary");
-        if (summary && summary.querySelector("li")) {
-            summary.style.display = "block";
-        }
-    });
-</script>

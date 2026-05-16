@@ -1,43 +1,60 @@
-﻿@{
+@model IEnumerable<Chapeau_ordering_system.Models.RestaurantTable>
+@using Chapeau_ordering_system.Models.Enums
+
+@{
     ViewData["Title"] = "Restaurant Overview";
+    var tables = Model?.OrderBy(t => t.TableNumber).ToList() ?? new List<Chapeau_ordering_system.Models.RestaurantTable>();
+}
+
+@functions {
+    static string BadgeClass(TableStatus status) => status switch
+    {
+        TableStatus.Free     => "bg-success",
+        TableStatus.Occupied => "bg-danger",
+        TableStatus.Reserved => "bg-warning text-dark",
+        _                    => "bg-secondary"
+    };
+
+    static string BorderClass(TableStatus status) => status switch
+    {
+        TableStatus.Free     => "border-success",
+        TableStatus.Occupied => "border-danger",
+        _                    => "border-secondary"
+    };
 }
 
 <div class="container mt-4">
-
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Restaurant Overview</h2>
-        <div class="d-flex align-items-center gap-3">
-            <span>
-                Welcome, <strong>@ViewData["EmployeeName"]</strong>
-                <span class="badge bg-secondary ms-1">@ViewData["EmployeeRole"]</span>
-            </span>
-            <a asp-controller="Account" asp-action="Logout" class="btn btn-outline-danger btn-sm">
-                Log Out
-            </a>
-        </div>
+        <span>
+            Welcome, <strong>@ViewData["EmployeeName"]</strong>
+            <span class="badge bg-secondary ms-1">@ViewData["EmployeeRole"]</span>
+        </span>
     </div>
 
-    <div class="alert alert-info">
-            You are logged in as
-        <strong>@ViewData["EmployeeRole"]</strong>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Tables</h5>
+        <form method="get" asp-action="Index">
+            <button type="submit" class="btn btn-sm btn-outline-primary">Refresh</button>
+        </form>
     </div>
 
-    <div class="row mt-4">
-        <div class="col-md-4">
-            <div class="card text-center p-4 border-secondary">
-                <h5 class="text-muted">Tables</h5>
+    <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:16px;">
+        @foreach (var t in tables)
+        {
+            <div class="card p-3 border @BorderClass(t.Status)">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <strong>Table @t.TableNumber</strong>
+                    <span class="badge @BadgeClass(t.Status)">@t.Status</span>
+                </div>
+                <div class="small text-muted">
+                    <div>Seats: @t.NumberOfSeats</div>
+                    @if (t.OccupiedSince.HasValue)
+                    {
+                        <div>Since: @t.OccupiedSince.Value.ToShortTimeString()</div>
+                    }
+                </div>
             </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card text-center p-4 border-secondary">
-                <h5 class="text-muted">Active Orders</h5>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card text-center p-4 border-secondary">
-                <h5 class="text-muted">Kitchen / Bar</h5>
-            </div>
-        </div>
+        }
     </div>
-
 </div>
