@@ -38,6 +38,12 @@ namespace Chapeau_ordering_system.Services
                 // Treat this as authentication failure rather than crashing the app.
                 return null;
             }
+            catch (BCrypt.Net.SaltParseException)
+            {
+                // BCrypt throws SaltParseException when the hash has invalid format or version.
+                // Treat this as authentication failure.
+                return null;
+            }
 
             if (!passwordIsCorrect)
                 return null;
