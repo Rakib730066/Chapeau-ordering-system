@@ -1,0 +1,1 @@
+SELECT EmployeeId, Username, LEN(PasswordHash) AS HashLen, LEFT(PasswordHash,4) AS Prefix FROM dbo.Employees WHERE Username = 'waiter1';
