@@ -61,12 +61,14 @@ Controllers/
 Models/
  Employee.cs
  Enums/
+  CourseType.cs
   EmployeeRole.cs
   MenuItemType.cs
   OrderItemStatus.cs
   OrderStatus.cs
   TableStatus.cs
  ErrorViewModel.cs
+ MenuItem.cs
  Order.cs
  OrderItem.cs
  RestaurantTable.cs
@@ -78,6 +80,7 @@ obj/Debug/net8.0/
 Program.cs
 Repositories/
  BarKitchenRepository.cs
+ DummyBarKitchenRepository.cs
  EmployeeRepository.cs
  Interfaces/
   IBarKitchenRepository.cs

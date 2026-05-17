@@ -19,6 +19,14 @@ builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<ITableRepository, TableRepository>();
 builder.Services.AddScoped<ITableService, TableService>();
 
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+
+// I register Bar/Kitchen repository and service for dependency injection
+// I use the dummy repository until the real menu and table database tables are ready
+builder.Services.AddScoped<IBarKitchenRepository, DummyBarKitchenRepository>();
+builder.Services.AddScoped<IBarKitchenService, BarKitchenService>();
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -38,3 +46,4 @@ app.MapControllerRoute(
     pattern: "{controller=Account}/{action=Login}/{id?}");
 
 app.Run();
+ 

@@ -37,7 +37,15 @@ namespace Chapeau_ordering_system.Controllers
             HttpContext.Session.SetString("EmployeeName", employee.FullName);
             HttpContext.Session.SetString("EmployeeRole", employee.Role.ToString());
 
-            return RedirectToAction("Index", "RestaurantOverview");
+            // Redirect based on employee role
+            if (employee.Role.ToString() == "Bar" || employee.Role.ToString() == "Kitchen")
+            {
+                return RedirectToAction("Index", "BarKitchen");
+            }
+            else
+            {
+                return RedirectToAction("Index", "RestaurantOverview");
+            }
         }
 
         [HttpPost]

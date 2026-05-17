@@ -1,5 +1,5 @@
-﻿using Chapeau_ordering_system.Models;
 using Chapeau_ordering_system.Services.Interfaces;
+using Chapeau_ordering_system.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Chapeau_ordering_system.Controllers
@@ -7,10 +7,12 @@ namespace Chapeau_ordering_system.Controllers
     public class RestaurantOverviewController : Controller
     {
         private readonly ITableService _tableService;
+        private readonly IOrderService _orderService;
 
-        public RestaurantOverviewController(ITableService tableService)
+        public RestaurantOverviewController(ITableService tableService, IOrderService orderService)
         {
             _tableService = tableService;
+            _orderService = orderService;
         }
 
         public IActionResult Index()
@@ -22,8 +24,12 @@ namespace Chapeau_ordering_system.Controllers
             ViewData["EmployeeName"] = HttpContext.Session.GetString("EmployeeName");
             ViewData["EmployeeRole"] = employeeRole;
 
-            var tables = _tableService.GetAllTables().ToList();
-            return View(tables);
+            var model = new RestaurantOverviewViewModel
+            {
+                Tables     = _tableService.GetAllTables(),
+                OpenOrders = _orderService.GetOpenOrders()
+            };
+            return View(model);
         }
     }
 }
