@@ -39,6 +39,8 @@ namespace Chapeau_ordering_system.Repositories
                 WHERE o.Status = 1
                 ORDER BY o.OrderId, oi.OrderItemId";
 
+            try
+            {
             using var conn = new SqlConnection(_connectionString);
             using var cmd  = new SqlCommand(query, conn);
             conn.Open();
@@ -107,6 +109,11 @@ namespace Chapeau_ordering_system.Repositories
             }
 
             return orders.Values;
+            }
+            catch (SqlException)
+            {
+                return orders.Values;
+            }
         }
     }
 }
