@@ -14,6 +14,58 @@ namespace Chapeau_ordering_system.Repositories
             _connectionString = configuration.GetConnectionString("ChapeauDatabase");
         }
 
+        // ============================================
+        // MAPPING HELPER METHODS
+        // ============================================
+
+        private Order MapOrder(SqlDataReader reader)
+        {
+            Order order = new Order();
+            order.OrderId = (int)reader["OrderId"];
+            order.OrderTime = (DateTime)reader["OrderTime"];
+            order.Status = (OrderStatus)(int)reader["Status"];
+            return order;
+        }
+
+        private RestaurantTable MapRestaurantTable(SqlDataReader reader)
+        {
+            RestaurantTable table = new RestaurantTable();
+            table.TableId = (int)reader["TableId"];
+            table.TableNumber = (int)reader["TableNumber"];
+            return table;
+        }
+
+        private Employee MapEmployee(SqlDataReader reader)
+        {
+            Employee employee = new Employee();
+            employee.EmployeeId = (int)reader["EmployeeId"];
+            employee.FirstName = (string)reader["FirstName"];
+            employee.LastName = (string)reader["LastName"];
+            employee.Role = (EmployeeRole)(int)reader["Role"];
+            return employee;
+        }
+
+        private OrderItem MapOrderItem(SqlDataReader reader)
+        {
+            OrderItem orderItem = new OrderItem();
+            orderItem.OrderItemId = (int)reader["OrderItemId"];
+            orderItem.MenuItem = new MenuItem();
+            orderItem.MenuItem.MenuItemId = (int)reader["MenuItemId"];
+            orderItem.MenuItem.Name = (string)reader["MenuItemName"];
+            orderItem.MenuItem.Price = (decimal)reader["Price"];
+            orderItem.MenuItem.Type = (MenuItemType)(int)reader["Type"];
+            orderItem.MenuItem.Course = (CourseType)(int)reader["Course"];
+            orderItem.Quantity = (int)reader["Quantity"];
+            orderItem.Comment = reader["Comment"] == DBNull.Value ? null : (string)reader["Comment"];
+            orderItem.Status = (OrderItemStatus)(int)reader["OrderItemStatus"];
+            orderItem.OrderTime = (DateTime)reader["OrderItemTime"];
+            return orderItem;
+        }
+
+        // ============================================
+        // CRUD OPERATIONS
+        // ============================================
+
         // Get all orders from database
         public List<Order> GetAll()
         {
@@ -24,21 +76,18 @@ namespace Chapeau_ordering_system.Repositories
                 using (SqlCommand command = new SqlCommand("SELECT * FROM Orders", connection))
                 {
                     connection.Open();
-                    SqlDataReader reader = command.ExecuteReader();
-                    while (reader.Read())
+                    using (SqlDataReader reader = command.ExecuteReader())
                     {
-                        Order order = new Order();
-                        order.OrderId = (int)reader["OrderId"];
-                        order.OrderTime = (DateTime)reader["OrderTime"];
-                        order.Status = (OrderStatus)(int)reader["Status"];
-                        orders.Add(order);
+                        while (reader.Read())
+                        {
+                            orders.Add(MapOrder(reader));
+                        }
                     }
-                    reader.Close();
                 }
             }
-            catch (Exception ex)
+            catch (SqlException ex)
             {
-                throw new Exception("Error fetching all orders: " + ex.Message);
+                throw new Exception("Error fetching all orders.", ex);
             }
             return orders;
         }
@@ -54,20 +103,18 @@ namespace Chapeau_ordering_system.Repositories
                 {
                     command.Parameters.AddWithValue("@OrderId", orderId);
                     connection.Open();
-                    SqlDataReader reader = command.ExecuteReader();
-                    if (reader.Read())
+                    using (SqlDataReader reader = command.ExecuteReader())
                     {
-                        order = new Order();
-                        order.OrderId = (int)reader["OrderId"];
-                        order.OrderTime = (DateTime)reader["OrderTime"];
-                        order.Status = (OrderStatus)(int)reader["Status"];
+                        if (reader.Read())
+                        {
+                            order = MapOrder(reader);
+                        }
                     }
-                    reader.Close();
                 }
             }
-            catch (Exception ex)
+            catch (SqlException ex)
             {
-                throw new Exception("Error fetching order by ID: " + ex.Message);
+                throw new Exception("Error fetching order by ID.", ex);
             }
             return order;
         }
@@ -85,7 +132,7 @@ namespace Chapeau_ordering_system.Repositories
                         oi.OrderItemId, oi.MenuItemId, oi.Quantity, oi.Comment,
                         oi.Status AS OrderItemStatus, oi.OrderTime AS OrderItemTime,
                         mi.Name AS MenuItemName, mi.Price, mi.Type, mi.Course
-                    FROM Orders o
+                    FROM  Orders o
                     INNER JOIN OrderItems oi ON o.OrderId = oi.OrderId
                     INNER JOIN MenuItems mi ON oi.MenuItemId = mi.MenuItemId
                     INNER JOIN Tables t ON o.TableId = t.TableId
@@ -99,49 +146,29 @@ namespace Chapeau_ordering_system.Repositories
                 {
                     command.Parameters.AddWithValue("@MenuItemType", (int)menuItemType);
                     connection.Open();
-                    SqlDataReader reader = command.ExecuteReader();
-
-                    while (reader.Read())
+                    using (SqlDataReader reader = command.ExecuteReader())
                     {
-                        int orderId = (int)reader["OrderId"];
-                        if (!orders.ContainsKey(orderId))
+                        while (reader.Read())
                         {
-                            Order order = new Order();
-                            order.OrderId = orderId;
-                            order.Table = new RestaurantTable();
-                            order.Table.TableId = (int)reader["TableId"];
-                            order.Table.TableNumber = (int)reader["TableNumber"];
-                            order.Employee = new Employee();
-                            order.Employee.EmployeeId = (int)reader["EmployeeId"];
-                            order.Employee.FirstName = (string)reader["FirstName"];
-                            order.Employee.LastName = (string)reader["LastName"];
-                            order.Employee.Role = (EmployeeRole)(int)reader["Role"];
-                            order.OrderTime = (DateTime)reader["OrderTime"];
-                            order.Status = (OrderStatus)(int)reader["Status"];
-                            order.OrderItems = new List<OrderItem>();
-                            orders[orderId] = order;
-                        }
+                            int orderId = (int)reader["OrderId"];
+                            if (!orders.ContainsKey(orderId))
+                            {
+                                Order order = MapOrder(reader);
+                                order.Table = MapRestaurantTable(reader);
+                                order.Employee = MapEmployee(reader);
+                                order.OrderItems = new List<OrderItem>();
+                                orders[orderId] = order;
+                            }
 
-                        OrderItem orderItem = new OrderItem();
-                        orderItem.OrderItemId = (int)reader["OrderItemId"];
-                        orderItem.MenuItem = new MenuItem();
-                        orderItem.MenuItem.MenuItemId = (int)reader["MenuItemId"];
-                        orderItem.MenuItem.Name = (string)reader["MenuItemName"];
-                        orderItem.MenuItem.Price = (decimal)reader["Price"];
-                        orderItem.MenuItem.Type = (MenuItemType)(int)reader["Type"];
-                        orderItem.MenuItem.Course = (CourseType)(int)reader["Course"];
-                        orderItem.Quantity = (int)reader["Quantity"];
-                        orderItem.Comment = reader["Comment"] == DBNull.Value ? null : (string)reader["Comment"];
-                        orderItem.Status = (OrderItemStatus)(int)reader["OrderItemStatus"];
-                        orderItem.OrderTime = (DateTime)reader["OrderItemTime"];
-                        orders[orderId].OrderItems.Add(orderItem);
+                            OrderItem orderItem = MapOrderItem(reader);
+                            orders[orderId].OrderItems.Add(orderItem);
+                        }
                     }
-                    reader.Close();
                 }
             }
-            catch (Exception ex)
+            catch (SqlException ex)
             {
-                throw new Exception("Error fetching running orders: " + ex.Message);
+                throw new Exception("Error fetching running orders.", ex);
             }
             return orders.Values.ToList();
         }
@@ -166,9 +193,9 @@ namespace Chapeau_ordering_system.Repositories
                     command.ExecuteNonQuery();
                 }
             }
-            catch (Exception ex)
+            catch (SqlException ex)
             {
-                throw new Exception("Error adding order: " + ex.Message);
+                throw new Exception("Error adding order.", ex);
             }
         }
 
@@ -190,9 +217,9 @@ namespace Chapeau_ordering_system.Repositories
                     command.ExecuteNonQuery();
                 }
             }
-            catch (Exception ex)
+            catch (SqlException ex)
             {
-                throw new Exception("Error updating order: " + ex.Message);
+                throw new Exception("Error updating order.", ex);
             }
         }
 
@@ -211,9 +238,9 @@ namespace Chapeau_ordering_system.Repositories
                     command.ExecuteNonQuery();
                 }
             }
-            catch (Exception ex)
+            catch (SqlException ex)
             {
-                throw new Exception("Error deleting order: " + ex.Message);
+                throw new Exception("Error deleting order.", ex);
             }
         }
 
@@ -241,9 +268,9 @@ namespace Chapeau_ordering_system.Repositories
                     command.ExecuteNonQuery();
                 }
             }
-            catch (Exception ex)
+            catch (SqlException ex)
             {
-                throw new Exception("Error updating order status: " + ex.Message);
+                throw new Exception("Error updating order status.", ex);
             }
         }
 
@@ -266,9 +293,9 @@ namespace Chapeau_ordering_system.Repositories
                     command.ExecuteNonQuery();
                 }
             }
-            catch (Exception ex)
+            catch (SqlException ex)
             {
-                throw new Exception("Error updating order items status: " + ex.Message);
+                throw new Exception("Error updating order items status.", ex);
             }
         }
 
@@ -291,9 +318,9 @@ namespace Chapeau_ordering_system.Repositories
                     command.ExecuteNonQuery();
                 }
             }
-            catch (Exception ex)
+            catch (SqlException ex)
             {
-                throw new Exception("Error updating order item status: " + ex.Message);
+                throw new Exception("Error updating order item status.", ex);
             }
         }
     }

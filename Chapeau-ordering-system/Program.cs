@@ -18,8 +18,8 @@ builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 
 // I register Bar/Kitchen repository and service for dependency injection
-// I use the dummy repository until the real menu and table database tables are ready
-builder.Services.AddScoped<IBarKitchenRepository, DummyBarKitchenRepository>();
+// Using real database repository
+builder.Services.AddScoped<IBarKitchenRepository, BarKitchenRepository>();
 builder.Services.AddScoped<IBarKitchenService, BarKitchenService>();
 
 var app = builder.Build();
