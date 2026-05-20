@@ -110,7 +110,7 @@ namespace Chapeau_ordering_system.Repositories
                             order.OrderId = orderId;
                             order.Table = new RestaurantTable();
                             order.Table.TableId = (int)reader["TableId"];
-                            order.Table.TableNumber = (int)reader["TableNumber"];
+                            order.Table.TableNumber = reader["TableNumber"].ToString()!;
                             order.Employee = new Employee();
                             order.Employee.EmployeeId = (int)reader["EmployeeId"];
                             order.Employee.FirstName = (string)reader["FirstName"];
