@@ -34,7 +34,7 @@ namespace Chapeau_ordering_system.Controllers
             }
 
             HttpContext.Session.SetInt32("EmployeeId", employee.EmployeeId);
-            HttpContext.Session.SetString("EmployeeName", $"{employee.FirstName} {employee.LastName}");
+            HttpContext.Session.SetString("EmployeeName", employee.FullName);
             HttpContext.Session.SetString("EmployeeRole", employee.Role.ToString());
 
             // Redirect based on employee role
@@ -48,6 +48,8 @@ namespace Chapeau_ordering_system.Controllers
             }
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult Logout()
         {
             HttpContext.Session.Clear();
