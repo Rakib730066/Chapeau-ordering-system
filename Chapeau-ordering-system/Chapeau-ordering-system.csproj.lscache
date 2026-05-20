@@ -57,6 +57,7 @@ Controllers/
  AccountController.cs
  BarKitchenController.cs
  HomeController.cs
+ RestaurantOverviewController.cs
 Models/
  Employee.cs
  Enums/
@@ -65,6 +66,7 @@ Models/
   MenuItemType.cs
   OrderItemStatus.cs
   OrderStatus.cs
+  TableStatus.cs
  ErrorViewModel.cs
  MenuItem.cs
  Order.cs
@@ -84,6 +86,7 @@ Repositories/
   IBarKitchenRepository.cs
   IEmployeeRepository.cs
   ITableRepository.cs
+ TableRepository.cs
 Services/
  BarKitchenService.cs
  EmployeeService.cs
@@ -91,12 +94,13 @@ Services/
   IBarKitchenService.cs
   IEmployeeService.cs
   ITableService.cs
+ TableService.cs
 ViewModels/
  BarKitchenViewModel.cs
  LoginViewModel.cs
 
 [metadataReferences]
-<DOTNET>/packs/Microsoft.AspNetCore.App.Ref/8.0.22/ref/net8.0/
+<DOTNET>/packs/Microsoft.AspNetCore.App.Ref/8.0.26/ref/net8.0/
  Microsoft.AspNetCore.Antiforgery.dll
  Microsoft.AspNetCore.Authentication.Abstractions.dll
  Microsoft.AspNetCore.Authentication.BearerToken.dll
@@ -235,7 +239,7 @@ ViewModels/
  System.IO.Pipelines.dll
  System.Security.Cryptography.Xml.dll
  System.Threading.RateLimiting.dll
-<DOTNET>/packs/Microsoft.NETCore.App.Ref/8.0.22/ref/net8.0/
+<DOTNET>/packs/Microsoft.NETCore.App.Ref/8.0.26/ref/net8.0/
  Microsoft.CSharp.dll
  Microsoft.VisualBasic.Core.dll
  Microsoft.VisualBasic.dll
@@ -420,34 +424,34 @@ ViewModels/
  system.security.cryptography.protecteddata/8.0.0/lib/net8.0/System.Security.Cryptography.ProtectedData.dll
 
 [analyzerReferences]
-<DOTNET>/packs/Microsoft.AspNetCore.App.Ref/8.0.22/analyzers/dotnet/cs/
+<DOTNET>/packs/Microsoft.AspNetCore.App.Ref/8.0.26/analyzers/dotnet/cs/
  Microsoft.AspNetCore.App.Analyzers.dll
  Microsoft.AspNetCore.App.CodeFixes.dll
  Microsoft.AspNetCore.Components.Analyzers.dll
-<DOTNET>/packs/Microsoft.AspNetCore.App.Ref/8.0.22/analyzers/dotnet/roslyn4.4/cs/
+<DOTNET>/packs/Microsoft.AspNetCore.App.Ref/8.0.26/analyzers/dotnet/roslyn4.4/cs/
  Microsoft.Extensions.Logging.Generators.dll
  Microsoft.Extensions.Options.SourceGeneration.dll
-<DOTNET>/packs/Microsoft.NETCore.App.Ref/8.0.22/analyzers/dotnet/cs/
+<DOTNET>/packs/Microsoft.NETCore.App.Ref/8.0.26/analyzers/dotnet/cs/
  Microsoft.Interop.ComInterfaceGenerator.dll
  Microsoft.Interop.JavaScript.JSImportGenerator.dll
  Microsoft.Interop.LibraryImportGenerator.dll
  Microsoft.Interop.SourceGeneration.dll
  System.Text.Json.SourceGeneration.dll
  System.Text.RegularExpressions.Generator.dll
-<DOTNET>/sdk/9.0.308/Sdks/Microsoft.NET.Sdk.Razor/source-generators/
+<DOTNET>/sdk/9.0.313/Sdks/Microsoft.NET.Sdk.Razor/source-generators/
  Microsoft.AspNetCore.Razor.Utilities.Shared.dll
  Microsoft.CodeAnalysis.Razor.Compiler.dll
  Microsoft.Extensions.ObjectPool.dll
  System.Collections.Immutable.dll
-<DOTNET>/sdk/9.0.308/Sdks/Microsoft.NET.Sdk.Web/analyzers/cs/
+<DOTNET>/sdk/9.0.313/Sdks/Microsoft.NET.Sdk.Web/analyzers/cs/
  Microsoft.AspNetCore.Analyzers.dll
  Microsoft.AspNetCore.Mvc.Analyzers.dll
-<DOTNET>/sdk/9.0.308/Sdks/Microsoft.NET.Sdk/analyzers/
+<DOTNET>/sdk/9.0.313/Sdks/Microsoft.NET.Sdk/analyzers/
  Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll
  Microsoft.CodeAnalysis.NetAnalyzers.dll
 
 [analyzerConfigFiles]
-<DOTNET>/sdk/9.0.308/Sdks/Microsoft.NET.Sdk/analyzers/build/config/analysislevel_8_default.globalconfig
+<DOTNET>/sdk/9.0.313/Sdks/Microsoft.NET.Sdk/analyzers/build/config/analysislevel_8_default.globalconfig
 obj/Debug/net8.0/Chapeau-ordering-system.GeneratedMSBuildEditorConfig.editorconfig
 
 [additionalFiles]

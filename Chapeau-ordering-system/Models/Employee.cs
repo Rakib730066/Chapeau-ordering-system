@@ -12,5 +12,7 @@ namespace Chapeau_ordering_system.Models
         public string Email { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;
         public EmployeeRole Role { get; set; }
+
+        public string FullName => $"{FirstName} {LastName}";
     }
 }

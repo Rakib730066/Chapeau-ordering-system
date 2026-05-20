@@ -134,7 +134,7 @@ namespace Chapeau_ordering_system.Repositories
                 Table = new RestaurantTable
                 {
                     TableId = 1,
-                    TableNumber = 1
+                    TableNumber = "T1"
                 },
                 Employee = new Employee
                 {
@@ -193,7 +193,7 @@ namespace Chapeau_ordering_system.Repositories
                 Table = new RestaurantTable
                 {
                     TableId = 2,
-                    TableNumber = 2
+                    TableNumber = "T2"
                 },
                 Employee = new Employee
                 {
@@ -252,7 +252,7 @@ namespace Chapeau_ordering_system.Repositories
                 Table = new RestaurantTable
                 {
                     TableId = 3,
-                    TableNumber = 3
+                    TableNumber = "T3"
                 },
                 Employee = new Employee
                 {
@@ -293,7 +293,7 @@ namespace Chapeau_ordering_system.Repositories
                 Table = new RestaurantTable
                 {
                     TableId = 4,
-                    TableNumber = 4
+                    TableNumber = "T4"
                 },
                 Employee = new Employee
                 {
