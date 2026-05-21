@@ -1,45 +1,86 @@
-﻿@{
+@model Chapeau_ordering_system.ViewModels.RestaurantOverviewViewModel
+@using Chapeau_ordering_system.Models.Enums
+
+@{
     ViewData["Title"] = "Restaurant Overview";
+    var tables = Model.Tables.OrderBy(t => t.TableNumber).ToList();
+}
+
+@functions {
+    static string BadgeClass(TableStatus status) => status switch
+    {
+        TableStatus.Free     => "bg-success",
+        TableStatus.Occupied => "bg-danger",
+        TableStatus.Reserved => "bg-warning text-dark",
+        _                    => "bg-secondary"
+    };
+
+    static string BorderClass(TableStatus status) => status switch
+    {
+        TableStatus.Free     => "border-success",
+        TableStatus.Occupied => "border-danger",
+        _                    => "border-secondary"
+    };
+
+    static string ItemBadgeClass(OrderItemStatus status) => status switch
+    {
+        OrderItemStatus.Ordered         => "bg-primary",
+        OrderItemStatus.BeingPrepared   => "bg-warning text-dark",
+        OrderItemStatus.ReadyToBeServed => "bg-success",
+        OrderItemStatus.Served          => "bg-secondary",
+        _                               => "bg-secondary"
+    };
 }
 
 <div class="container mt-4">
-
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Restaurant Overview</h2>
-        <div class="d-flex align-items-center gap-3">
-            <span>
-                Welcome, <strong>@ViewData["EmployeeName"]</strong>
-                <span class="badge bg-secondary ms-1">@ViewData["EmployeeRole"]</span>
-            </span>
-            <a asp-controller="Account" asp-action="Logout" class="btn btn-outline-danger btn-sm">
-                Log Out
-            </a>
-        </div>
+        <span>
+            Welcome, <strong>@ViewData["EmployeeName"]</strong>
+            <span class="badge bg-secondary ms-1">@ViewData["EmployeeRole"]</span>
+        </span>
     </div>
 
-    <div class="alert alert-info">
-            You are logged in as
-        <strong>@ViewData["EmployeeRole"]</strong>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Tables</h5>
+        <form method="get" asp-action="Index">
+            <button type="submit" class="btn btn-sm btn-outline-primary">Refresh</button>
+        </form>
     </div>
 
-    <div class="row mt-4">
-        <div class="col-md-4">
-            <div class="card text-center p-4 border-secondary">
-                <h5 class="text-muted">Tables</h5>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card text-center p-4 border-secondary">
-                <h5 class="text-muted">Active Orders</h5>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <a asp-controller="BarKitchen" asp-action="Index" class="text-decoration-none">
-                <div class="card text-center p-4 border-secondary" style="cursor: pointer;">
-                    <h5 class="text-muted">Kitchen / Bar</h5>
+    <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:16px;">
+        @foreach (var t in tables)
+        {
+            var orders = Model.GetOrdersForTable(t.TableId).ToList();
+
+            <div class="card border @BorderClass(t.Status)">
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <strong>Table @t.TableNumber</strong>
+                    <span class="badge @BadgeClass(t.Status)">@t.Status</span>
                 </div>
-            </a>
-        </div>
-    </div>
+                <div class="card-body p-2">
+                    <div class="small text-muted">Seats: @t.NumberOfSeats</div>
+                    @if (t.OccupiedSince.HasValue)
+                    {
+                        <div class="small text-muted">Since: @t.OccupiedSince.Value.ToShortTimeString()</div>
+                    }
 
+                    @if (orders.Any())
+                    {
+                        <hr class="my-2">
+                        @foreach (var order in orders)
+                        {
+                            @foreach (var item in order.OrderItems)
+                            {
+                                <div class="d-flex justify-content-between align-items-center py-1">
+                                    <span class="small">@item.Quantity&times; @item.MenuItem?.Name</span>
+                                    <span class="badge @ItemBadgeClass(item.Status) ms-2">@item.Status</span>
+                                </div>
+                            }
+                        }
+                    }
+                </div>
+            </div>
+        }
+    </div>
 </div>

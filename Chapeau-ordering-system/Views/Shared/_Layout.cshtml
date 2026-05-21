@@ -26,6 +26,24 @@
                             <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
                         </li>
                     </ul>
+                    <div class="d-flex align-items-center">
+                        @{
+                            var employeeId = Context.Session.GetInt32("EmployeeId");
+                            var employeeName = Context.Session.GetString("EmployeeName");
+                        }
+                        @if (employeeId != null)
+                        {
+                            <span class="me-3">Hello, <strong>@employeeName</strong></span>
+                            <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-danger btn-sm">Log out</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <a class="btn btn-primary btn-sm" asp-controller="Account" asp-action="Login">Log in</a>
+                        }
+                    </div>
                 </div>
             </div>
         </nav>
@@ -41,9 +59,6 @@
             &copy; 2026 - Chapeau_ordering_system - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
         </div>
     </footer>
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
-    @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
