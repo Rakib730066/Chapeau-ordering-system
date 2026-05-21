@@ -13,29 +13,58 @@ namespace Chapeau_ordering_system.Controllers
             _barKitchenService = barKitchenService;
         }
 
-        // Single view for Bar and Kitchen - determines role from logged-in employee
+        // Simple session check
+        private bool IsEmployeeLoggedIn()
+        {
+            return HttpContext.Session.GetString("EmployeeRole") != null;
+        }
+
         public IActionResult Index()
         {
-            // Get the bar/kitchen view
-            BarKitchenViewModel viewModel = _barKitchenService.GetKitchenViewModel();
+            if (!IsEmployeeLoggedIn())
+                return RedirectToAction("Login", "Account");
+            var viewModel = _barKitchenService.GetBarKitchenViewModel();
             return View(viewModel);
         }
 
-        // Start preparing an item
+        
         [HttpPost]
         public IActionResult StartItem(int orderItemId)
         {
+            if (!IsEmployeeLoggedIn())
+                return RedirectToAction("Login", "Account");
             _barKitchenService.MarkItemBeingPrepared(orderItemId);
-            TempData["ConfirmMessage"] = "Item preparation started.";
             return RedirectToAction("Index");
         }
 
-        // Mark item as ready to be served
+        
         [HttpPost]
         public IActionResult MarkItemReady(int orderItemId)
         {
+            if (!IsEmployeeLoggedIn())
+                return RedirectToAction("Login", "Account");
+
             _barKitchenService.MarkItemReady(orderItemId);
-            TempData["ConfirmMessage"] = "Item marked as ready.";
+            return RedirectToAction("Index");
+        }
+
+        [HttpPost]
+        public IActionResult StartOrder(int orderId)
+        {
+            if (!IsEmployeeLoggedIn())
+                return RedirectToAction("Login", "Account");
+            _barKitchenService.MarkOrderBeingPrepared(orderId);
+            return RedirectToAction("Index");
+        }
+
+        // POST: Mark ALL items in order as ready to be served
+        [HttpPost]
+        public IActionResult MarkOrderReady(int orderId)
+        {
+            if (!IsEmployeeLoggedIn())
+                return RedirectToAction("Login", "Account");
+
+            _barKitchenService.MarkOrderReadyToServe(orderId);
             return RedirectToAction("Index");
         }
     }

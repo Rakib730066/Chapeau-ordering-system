@@ -53,10 +53,24 @@
 
                 <div class="col-md-6 mb-4">
                     <div class="card">
-                        <div class="card-header bg-primary text-white">
+                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                             <h5 class="card-title mb-0">
                                 Table @order.Table.TableNumber
                             </h5>
+                            <div class="btn-group btn-group-sm">
+                                <form asp-controller="BarKitchen" asp-action="StartOrder" method="post" style="display:inline;">
+                                    <input type="hidden" name="orderId" value="@order.OrderId" />
+                                    <button type="submit" class="btn btn-warning btn-sm">
+                                        Start All
+                                    </button>
+                                </form>
+                                <form asp-controller="BarKitchen" asp-action="MarkOrderReady" method="post" style="display:inline;">
+                                    <input type="hidden" name="orderId" value="@order.OrderId" />
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        Ready All
+                                    </button>
+                                </form>
+                            </div>
                         </div>
 
                         <div class="card-body">
@@ -93,42 +107,7 @@
 
                                         @foreach (var item in itemsInCourse)
                                         {
-                                            <div class="border rounded p-2 mb-2">
-                                                <p class="mb-1">
-                                                    <strong>@item.Quantity x @item.MenuItem.Name</strong>
-                                                </p>
-
-                                                @if (!string.IsNullOrEmpty(item.Comment))
-                                                {
-                                                    <p class="mb-1">
-                                                        <strong>Comment:</strong> @item.Comment
-                                                    </p>
-                                                }
-
-                                                <p class="mb-1">
-                                                    <strong>Status:</strong> @item.Status
-                                                </p>
-
-                                                <!-- I show the correct button based on the item status -->
-                                                @if (item.Status == OrderItemStatus.Ordered)
-                                                {
-                                                    <form asp-controller="BarKitchen" asp-action="StartItem" method="post">
-                                                        <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
-                                                        <button type="submit" class="btn btn-warning btn-sm">
-                                                            Start Item
-                                                        </button>
-                                                    </form>
-                                                }
-                                                else if (item.Status == OrderItemStatus.BeingPrepared)
-                                                {
-                                                    <form asp-controller="BarKitchen" asp-action="MarkItemReady" method="post">
-                                                        <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
-                                                        <button type="submit" class="btn btn-success btn-sm">
-                                                            Mark Item Ready
-                                                        </button>
-                                                    </form>
-                                                }
-                                            </div>
+                                            @await Html.PartialAsync("_OrderItemDisplay", item)
                                         }
                                     }
                                 }
@@ -138,42 +117,7 @@
                                 <!-- I show drink items without course grouping -->
                                 @foreach (var item in order.OrderItems)
                                 {
-                                    <div class="border rounded p-2 mb-2">
-                                        <p class="mb-1">
-                                            <strong>@item.Quantity x @item.MenuItem.Name</strong>
-                                        </p>
-
-                                        @if (!string.IsNullOrEmpty(item.Comment))
-                                        {
-                                            <p class="mb-1">
-                                                <strong>Comment:</strong> @item.Comment
-                                            </p>
-                                        }
-
-                                        <p class="mb-1">
-                                            <strong>Status:</strong> @item.Status
-                                        </p>
-
-                                        <!-- I show the correct button based on the item status -->
-                                        @if (item.Status == OrderItemStatus.Ordered)
-                                        {
-                                            <form asp-controller="BarKitchen" asp-action="StartItem" method="post">
-                                                <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
-                                                <button type="submit" class="btn btn-warning btn-sm">
-                                                    Start Item
-                                                </button>
-                                            </form>
-                                        }
-                                        else if (item.Status == OrderItemStatus.BeingPrepared)
-                                        {
-                                            <form asp-controller="BarKitchen" asp-action="MarkItemReady" method="post">
-                                                <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
-                                                <button type="submit" class="btn btn-success btn-sm">
-                                                    Mark Item Ready
-                                                </button>
-                                            </form>
-                                        }
-                                    </div>
+                                    @await Html.PartialAsync("_OrderItemDisplay", item)
                                 }
                             }
                         </div>

@@ -1,0 +1,39 @@
+@using Chapeau_ordering_system.Models.Enums
+@model OrderItem
+
+<div class="border rounded p-2 mb-2">
+    <p class="mb-1">
+        <strong>@Model.Quantity x @Model.MenuItem.Name</strong>
+    </p>
+
+    @if (!string.IsNullOrEmpty(Model.Comment))
+    {
+        <p class="mb-1">
+            <strong>Comment:</strong> @Model.Comment
+        </p>
+    }
+
+    <p class="mb-1">
+        <strong>Status:</strong> @Model.Status
+    </p>
+
+    <!-- Show the correct button based on the item status -->
+    @if (Model.Status == OrderItemStatus.Ordered)
+    {
+        <form asp-controller="BarKitchen" asp-action="StartItem" method="post">
+            <input type="hidden" name="orderItemId" value="@Model.OrderItemId" />
+            <button type="submit" class="btn btn-warning btn-sm">
+                Start Item
+            </button>
+        </form>
+    }
+    else if (Model.Status == OrderItemStatus.BeingPrepared)
+    {
+        <form asp-controller="BarKitchen" asp-action="MarkItemReady" method="post">
+            <input type="hidden" name="orderItemId" value="@Model.OrderItemId" />
+            <button type="submit" class="btn btn-success btn-sm">
+                Mark Item Ready
+            </button>
+        </form>
+    }
+</div>

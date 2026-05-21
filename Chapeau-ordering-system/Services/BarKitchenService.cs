@@ -3,38 +3,47 @@ using Chapeau_ordering_system.Models.Enums;
 using Chapeau_ordering_system.Repositories.Interfaces;
 using Chapeau_ordering_system.Services.Interfaces;
 using Chapeau_ordering_system.ViewModels;
+using Microsoft.Data.SqlClient;
 
 namespace Chapeau_ordering_system.Services
 {
     public class BarKitchenService : IBarKitchenService
     {
         private readonly IBarKitchenRepository _orderRepository;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public BarKitchenService(IBarKitchenRepository orderRepository)
+        public BarKitchenService(IBarKitchenRepository orderRepository, IHttpContextAccessor httpContextAccessor)
         {
             _orderRepository = orderRepository;
+            _httpContextAccessor = httpContextAccessor;
         }
 
-        // Get Kitchen ViewModel with food orders
-        public BarKitchenViewModel GetKitchenViewModel()
+        // Helper: Get MenuItemType based on logged-in employee role
+        private MenuItemType GetMenuItemTypeForCurrentEmployee()
         {
-            BarKitchenViewModel viewModel = new BarKitchenViewModel();
-            viewModel.PageTitle = "Kitchen Orders";
-            viewModel.ReturnPage = "Kitchen";
-            viewModel.MenuItemType = MenuItemType.Food;
-            viewModel.Orders = _orderRepository.GetRunningOrders(MenuItemType.Food);
+            var roleString = _httpContextAccessor.HttpContext?.Session.GetString("EmployeeRole");
+            
+            if (roleString == null)
+                throw new InvalidOperationException("Employee role not found in session.");
 
-            return viewModel;
+            if (Enum.TryParse<EmployeeRole>(roleString, out var role))
+            {
+                return role == EmployeeRole.Bar ? MenuItemType.Drink : MenuItemType.Food;
+            }
+
+            throw new InvalidOperationException("Invalid employee role in session.");
         }
 
-        // Get Bar ViewModel with drink orders
-        public BarKitchenViewModel GetBarViewModel()
+        // Get ViewModel based on logged-in employee role
+        public BarKitchenViewModel GetBarKitchenViewModel()
         {
+            MenuItemType menuItemType = GetMenuItemTypeForCurrentEmployee();
+
             BarKitchenViewModel viewModel = new BarKitchenViewModel();
-            viewModel.PageTitle = "Bar Orders";
-            viewModel.ReturnPage = "Bar";
-            viewModel.MenuItemType = MenuItemType.Drink;
-            viewModel.Orders = _orderRepository.GetRunningOrders(MenuItemType.Drink);
+            viewModel.MenuItemType = menuItemType;
+            viewModel.PageTitle = menuItemType == MenuItemType.Food ? "Kitchen Orders" : "Bar Orders";
+            viewModel.ReturnPage = menuItemType == MenuItemType.Food ? "Kitchen" : "Bar";
+            viewModel.Orders = _orderRepository.GetRunningOrders(menuItemType);
 
             return viewModel;
         }
@@ -42,9 +51,11 @@ namespace Chapeau_ordering_system.Services
         // Mark order item as being prepared
         public void MarkItemBeingPrepared(int orderItemId)
         {
+            MenuItemType menuItemType = GetMenuItemTypeForCurrentEmployee();
+
             _orderRepository.UpdateOrderItemStatus(
                 orderItemId,
-                MenuItemType.Food,
+                menuItemType,
                 OrderItemStatus.Ordered,
                 OrderItemStatus.BeingPrepared);
         }
@@ -52,9 +63,35 @@ namespace Chapeau_ordering_system.Services
         // Mark order item as ready to be served
         public void MarkItemReady(int orderItemId)
         {
+            MenuItemType menuItemType = GetMenuItemTypeForCurrentEmployee();
+
             _orderRepository.UpdateOrderItemStatus(
                 orderItemId,
-                MenuItemType.Food,
+                menuItemType,
+                OrderItemStatus.BeingPrepared,
+                OrderItemStatus.ReadyToBeServed);
+        }
+
+        // Mark all items in an order as being prepared
+        public void MarkOrderBeingPrepared(int orderId)
+        {
+            MenuItemType menuItemType = GetMenuItemTypeForCurrentEmployee();
+
+            _orderRepository.UpdateOrderItemsStatusForOrder(
+                orderId,
+                menuItemType,
+                OrderItemStatus.Ordered,
+                OrderItemStatus.BeingPrepared);
+        }
+
+        // Mark all items in an order as ready to be served
+        public void MarkOrderReadyToServe(int orderId)
+        {
+            MenuItemType menuItemType = GetMenuItemTypeForCurrentEmployee();
+
+            _orderRepository.UpdateOrderItemsStatusForOrder(
+                orderId,
+                menuItemType,
                 OrderItemStatus.BeingPrepared,
                 OrderItemStatus.ReadyToBeServed);
         }

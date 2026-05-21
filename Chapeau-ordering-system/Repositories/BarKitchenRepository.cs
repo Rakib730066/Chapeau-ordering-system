@@ -7,11 +7,14 @@ namespace Chapeau_ordering_system.Repositories
 {
     public class BarKitchenRepository : IBarKitchenRepository
     {
-        private readonly string? _connectionString;
+        private readonly string _connectionString;
 
         public BarKitchenRepository(IConfiguration configuration)
         {
-            _connectionString = configuration.GetConnectionString("ChapeauDatabase");
+            _connectionString = configuration.GetConnectionString("ChapeauDatabase")
+                ?? throw new ArgumentNullException(
+                    nameof(configuration),
+                    "Connection string 'ChapeauDatabase' not found in configuration.");
         }
 
         // ============================================
@@ -31,7 +34,7 @@ namespace Chapeau_ordering_system.Repositories
         {
             RestaurantTable table = new RestaurantTable();
             table.TableId = (int)reader["TableId"];
-            table.TableNumber = (int)reader["TableNumber"];
+            table.TableNumber = (string)reader["TableNumber"];
             return table;
         }
 
@@ -118,10 +121,82 @@ namespace Chapeau_ordering_system.Repositories
             }
             return order;
         }
+                // Add new order
+        public void Add(Order order)
+        {
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                using (SqlCommand command = new SqlCommand(
+                    "INSERT INTO Orders (TableId, EmployeeId, Status, OrderTime) VALUES (@TableId, @EmployeeId, @Status, @OrderTime)",
+                    connection))
+                {
+                    command.Parameters.AddWithValue("@TableId", order.Table?.TableId ?? 0);
+                    command.Parameters.AddWithValue("@EmployeeId", order.Employee?.EmployeeId ?? 0);
+                    command.Parameters.AddWithValue("@Status", (int)order.Status);
+                    command.Parameters.AddWithValue("@OrderTime", order.OrderTime);
+
+                    connection.Open();
+                    command.ExecuteNonQuery();
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Error adding order.", ex);
+            }
+        }
+        // Update order
+        public void Update(Order order)
+        {
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                using (SqlCommand command = new SqlCommand(
+                    "UPDATE Orders SET TableId = @TableId, Status = @Status WHERE OrderId = @OrderId",
+                    connection))
+                {
+                    command.Parameters.AddWithValue("@OrderId", order.OrderId);
+                    command.Parameters.AddWithValue("@TableId", order.Table?.TableId ?? 0);
+                    command.Parameters.AddWithValue("@Status", (int)order.Status);
+
+                    connection.Open();
+                    command.ExecuteNonQuery();
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Error updating order.", ex);
+            }
+        }
+
+        // Delete order
+        public void Delete(int orderId)
+        {
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                using (SqlCommand command = new SqlCommand(
+                    "DELETE FROM Orders WHERE OrderId = @OrderId",
+                    connection))
+                {
+                    command.Parameters.AddWithValue("@OrderId", orderId);
+                    connection.Open();
+                    command.ExecuteNonQuery();
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Error deleting order.", ex);
+            }
+        }
 
         // Get running orders (filtered by Bar or Kitchen using MenuItemType)
         public List<Order> GetRunningOrders(MenuItemType menuItemType)
         {
+            // Validate MenuItemType parameter
+            if (menuItemType != MenuItemType.Food && menuItemType != MenuItemType.Drink)
+                throw new ArgumentException($"Invalid menu item type: {menuItemType}");
+
             Dictionary<int, Order> orders = new Dictionary<int, Order>();
             try
             {
@@ -174,75 +249,9 @@ namespace Chapeau_ordering_system.Repositories
         }
 
 
-        // Add new order
-        public void Add(Order order)
-        {
-            try
-            {
-                using (SqlConnection connection = new SqlConnection(_connectionString))
-                using (SqlCommand command = new SqlCommand(
-                    "INSERT INTO Orders (TableId, EmployeeId, Status, OrderTime) VALUES (@TableId, @EmployeeId, @Status, @OrderTime)",
-                    connection))
-                {
-                    command.Parameters.AddWithValue("@TableId", order.Table?.TableId ?? 0);
-                    command.Parameters.AddWithValue("@EmployeeId", order.Employee?.EmployeeId ?? 0);
-                    command.Parameters.AddWithValue("@Status", (int)order.Status);
-                    command.Parameters.AddWithValue("@OrderTime", order.OrderTime);
 
-                    connection.Open();
-                    command.ExecuteNonQuery();
-                }
-            }
-            catch (SqlException ex)
-            {
-                throw new Exception("Error adding order.", ex);
-            }
-        }
 
-        // Update order
-        public void Update(Order order)
-        {
-            try
-            {
-                using (SqlConnection connection = new SqlConnection(_connectionString))
-                using (SqlCommand command = new SqlCommand(
-                    "UPDATE Orders SET TableId = @TableId, Status = @Status WHERE OrderId = @OrderId",
-                    connection))
-                {
-                    command.Parameters.AddWithValue("@OrderId", order.OrderId);
-                    command.Parameters.AddWithValue("@TableId", order.Table?.TableId ?? 0);
-                    command.Parameters.AddWithValue("@Status", (int)order.Status);
-
-                    connection.Open();
-                    command.ExecuteNonQuery();
-                }
-            }
-            catch (SqlException ex)
-            {
-                throw new Exception("Error updating order.", ex);
-            }
-        }
-
-        // Delete order
-        public void Delete(int orderId)
-        {
-            try
-            {
-                using (SqlConnection connection = new SqlConnection(_connectionString))
-                using (SqlCommand command = new SqlCommand(
-                    "DELETE FROM Orders WHERE OrderId = @OrderId",
-                    connection))
-                {
-                    command.Parameters.AddWithValue("@OrderId", orderId);
-                    connection.Open();
-                    command.ExecuteNonQuery();
-                }
-            }
-            catch (SqlException ex)
-            {
-                throw new Exception("Error deleting order.", ex);
-            }
-        }
+        
 
         // Update order status
         public void UpdateStatus(int orderId, string status)
@@ -302,6 +311,10 @@ namespace Chapeau_ordering_system.Repositories
         // Update single item with role filtering (Bar/Kitchen complex method)
         public void UpdateOrderItemStatus(int orderItemId, MenuItemType menuItemType, OrderItemStatus oldStatus, OrderItemStatus newStatus)
         {
+            // Validate MenuItemType parameter
+            if (menuItemType != MenuItemType.Food && menuItemType != MenuItemType.Drink)
+                throw new ArgumentException($"Invalid menu item type: {menuItemType}");
+
             try
             {
                 using (SqlConnection connection = new SqlConnection(_connectionString))
