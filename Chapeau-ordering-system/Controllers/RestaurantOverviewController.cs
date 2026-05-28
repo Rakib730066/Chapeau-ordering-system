@@ -17,6 +17,8 @@ namespace Chapeau_ordering_system.Controllers
 
         public IActionResult Index()
         {
+           
+
             string? employeeRole = HttpContext.Session.GetString("EmployeeRole");
             if (string.IsNullOrEmpty(employeeRole))
                 return RedirectToAction("Login", "Account");
@@ -26,9 +28,10 @@ namespace Chapeau_ordering_system.Controllers
 
             var model = new RestaurantOverviewViewModel
             {
-                Tables     = _tableService.GetAllTables(),
+                Tables = _tableService.GetAllTables(),
                 OpenOrders = _orderService.GetOpenOrders()
             };
+
             return View(model);
         }
     }
