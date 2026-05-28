@@ -7,9 +7,18 @@
 
 <div class="container-fluid mt-4">
 
-    @if (!string.IsNullOrEmpty(Model.ConfirmationMessage))
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
     {
-        <div class="alert alert-success">@Model.ConfirmationMessage</div>
+        <div class="alert alert-danger">
+            @Model.ErrorMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.ConfirmationMessage))
+    {
+        <div class="alert alert-success">
+            @Model.ConfirmationMessage
+        </div>
     }
 
     <div class="row">
@@ -62,38 +71,201 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var item in Model.Menu.MenuItems)
+                    @{
+                        var menuItems = Model.Menu.MenuItems;
+                    }
+
+                    @if (Model.Menu.ActiveType == null)
                     {
-                        <tr class="@(item.IsOutOfStock ? "table-danger" : "")">
-                            <td><span class="fw-semibold">@item.Name</span></td>
-                            <td class="text-end">&euro; @item.Price.ToString("0.00")</td>
-                            <td class="text-center">
-                                @if (item.IsOutOfStock)
+                        var typeGroups = menuItems.GroupBy(item => item.Type)
+                            .OrderBy(group => group.Key);
+
+                        foreach (var typeGroup in typeGroups)
+                        {
+                            <tr class="menu-section">
+                                <td colspan="4">@typeGroup.Key</td>
+                            </tr>
+
+                            if (typeGroup.Key == MenuItemType.Food)
+                            {
+                                var courseGroups = typeGroup.GroupBy(item => item.Course)
+                                    .Where(group => group.Key != CourseType.None)
+                                    .OrderBy(group => group.Key);
+
+                                foreach (var courseGroup in courseGroups)
                                 {
-                                    <span class="badge bg-danger">Out of stock</span>
+                                    <tr class="menu-subsection">
+                                        <td colspan="4">@courseGroup.Key</td>
+                                    </tr>
+
+                                    foreach (var item in courseGroup)
+                                    {
+                                        <tr class="@(item.IsOutOfStock ? "table-danger" : "")">
+                                            <td><span class="fw-semibold">@item.Name</span></td>
+                                            <td class="text-end">&euro; @item.Price.ToString("0.00")</td>
+                                            <td class="text-center">
+                                                @if (item.IsOutOfStock)
+                                                {
+                                                    <span class="badge bg-danger">Out of stock</span>
+                                                }
+                                                else if (item.IsLowStock)
+                                                {
+                                                    <span class="badge bg-warning text-dark">Low (@item.Stock)</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted small">@item.Stock</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (!item.IsOutOfStock)
+                                                {
+                                                    <form asp-action="AddItem" method="post">
+                                                        <input type="hidden" name="menuItemId" value="@item.MenuItemId" />
+                                                        <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
+                                                        <input type="hidden" name="type" value="@((int?)Model.Menu.ActiveType)" />
+                                                        <input type="hidden" name="course" value="@((int?)Model.Menu.ActiveCourse)" />
+                                                        <button type="submit" class="btn btn-sm btn-primary">+ Add</button>
+                                                    </form>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
                                 }
-                                else if (item.IsLowStock)
+                            }
+                            else
+                            {
+                                foreach (var item in typeGroup)
                                 {
-                                    <span class="badge bg-warning text-dark">Low (@item.Stock)</span>
+                                    <tr class="@(item.IsOutOfStock ? "table-danger" : "")">
+                                        <td><span class="fw-semibold">@item.Name</span></td>
+                                        <td class="text-end">&euro; @item.Price.ToString("0.00")</td>
+                                        <td class="text-center">
+                                            @if (item.IsOutOfStock)
+                                            {
+                                                <span class="badge bg-danger">Out of stock</span>
+                                            }
+                                            else if (item.IsLowStock)
+                                            {
+                                                <span class="badge bg-warning text-dark">Low (@item.Stock)</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">@item.Stock</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (!item.IsOutOfStock)
+                                            {
+                                                <form asp-action="AddItem" method="post">
+                                                    <input type="hidden" name="menuItemId" value="@item.MenuItemId" />
+                                                    <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
+                                                    <input type="hidden" name="type" value="@((int?)Model.Menu.ActiveType)" />
+                                                    <input type="hidden" name="course" value="@((int?)Model.Menu.ActiveCourse)" />
+                                                    <button type="submit" class="btn btn-sm btn-primary">+ Add</button>
+                                                </form>
+                                            }
+                                        </td>
+                                    </tr>
                                 }
-                                else
-                                {
-                                    <span class="text-muted small">@item.Stock</span>
-                                }
-                            </td>
-                            <td>
-                                @if (!item.IsOutOfStock)
-                                {
-                                    <form asp-action="AddItem" method="post">
-                                        <input type="hidden" name="menuItemId" value="@item.MenuItemId" />
-                                        <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
-                                        <input type="hidden" name="type" value="@((int?)Model.Menu.ActiveType)" />
-                                        <input type="hidden" name="course" value="@((int?)Model.Menu.ActiveCourse)" />
-                                        <button type="submit" class="btn btn-sm btn-primary">+ Add</button>
-                                    </form>
-                                }
-                            </td>
-                        </tr>
+                            }
+                        }
+                    }
+                    else if (Model.Menu.ActiveType == MenuItemType.Food)
+                    {
+                        if (Model.Menu.ActiveCourse != null)
+                        {
+                            <tr class="menu-subsection">
+                                <td colspan="4">@Model.Menu.ActiveCourse</td>
+                            </tr>
+                        }
+
+                        var courseGroups = Model.Menu.ActiveCourse == null
+                            ? menuItems.GroupBy(item => item.Course)
+                                .Where(group => group.Key != CourseType.None)
+                                .OrderBy(group => group.Key)
+                            : menuItems.Where(item => item.Course == Model.Menu.ActiveCourse)
+                                .GroupBy(item => item.Course);
+
+                        foreach (var courseGroup in courseGroups)
+                        {
+                            if (Model.Menu.ActiveCourse == null)
+                            {
+                                <tr class="menu-subsection">
+                                    <td colspan="4">@courseGroup.Key</td>
+                                </tr>
+                            }
+
+                            foreach (var item in courseGroup)
+                            {
+                                <tr class="@(item.IsOutOfStock ? "table-danger" : "")">
+                                    <td><span class="fw-semibold">@item.Name</span></td>
+                                    <td class="text-end">&euro; @item.Price.ToString("0.00")</td>
+                                    <td class="text-center">
+                                        @if (item.IsOutOfStock)
+                                        {
+                                            <span class="badge bg-danger">Out of stock</span>
+                                        }
+                                        else if (item.IsLowStock)
+                                        {
+                                            <span class="badge bg-warning text-dark">Low (@item.Stock)</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">@item.Stock</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (!item.IsOutOfStock)
+                                        {
+                                            <form asp-action="AddItem" method="post">
+                                                <input type="hidden" name="menuItemId" value="@item.MenuItemId" />
+                                                <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
+                                                <input type="hidden" name="type" value="@((int?)Model.Menu.ActiveType)" />
+                                                <input type="hidden" name="course" value="@((int?)Model.Menu.ActiveCourse)" />
+                                                <button type="submit" class="btn btn-sm btn-primary">+ Add</button>
+                                            </form>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    }
+                    else
+                    {
+                        foreach (var item in menuItems)
+                        {
+                            <tr class="@(item.IsOutOfStock ? "table-danger" : "")">
+                                <td><span class="fw-semibold">@item.Name</span></td>
+                                <td class="text-end">&euro; @item.Price.ToString("0.00")</td>
+                                <td class="text-center">
+                                    @if (item.IsOutOfStock)
+                                    {
+                                        <span class="badge bg-danger">Out of stock</span>
+                                    }
+                                    else if (item.IsLowStock)
+                                    {
+                                        <span class="badge bg-warning text-dark">Low (@item.Stock)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">@item.Stock</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!item.IsOutOfStock)
+                                    {
+                                        <form asp-action="AddItem" method="post">
+                                            <input type="hidden" name="menuItemId" value="@item.MenuItemId" />
+                                            <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
+                                            <input type="hidden" name="type" value="@((int?)Model.Menu.ActiveType)" />
+                                            <input type="hidden" name="course" value="@((int?)Model.Menu.ActiveCourse)" />
+                                            <button type="submit" class="btn btn-sm btn-primary">+ Add</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
                     }
                 </tbody>
             </table>
@@ -118,6 +290,7 @@
                                     <th>Item</th>
                                     <th class="text-center">Qty</th>
                                     <th class="text-end">Subtotal</th>
+                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -125,29 +298,75 @@
                                 {
                                     <tr>
                                         <td>@item.MenuItem?.Name</td>
-                                        <td class="text-center">@item.Quantity</td>
+                                        <td class="text-center">
+                                            @* Decrease button *@
+                                            <form asp-action="DecreaseItem" method="post" class="d-inline">
+                                                <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
+                                                <input type="hidden" name="currentQuantity" value="@item.Quantity" />
+                                                <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary">-</button>
+                                            </form>
+                                            <span class="mx-1">@item.Quantity</span>
+                                            @* Increase button *@
+                                            <form asp-action="IncreaseItem" method="post" class="d-inline">
+                                                <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
+                                                <input type="hidden" name="currentQuantity" value="@item.Quantity" />
+                                                <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary">+</button>
+                                            </form>
+                                        </td>
                                         <td class="text-end">&euro; @((item.MenuItem!.Price * item.Quantity).ToString("0.00"))</td>
+                                        <td>
+                                            @* Remove button *@
+                                            <form asp-action="RemoveItem" method="post" class="d-inline">
+                                                <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
+                                                <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
+                                                <button type="submit" class="btn btn-sm btn-danger">✕</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    @* Comment row *@
+                                    <tr>
+                                        <td colspan="4">
+                                            <form asp-action="UpdateComment" method="post" class="d-flex gap-2">
+                                                <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
+                                                <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
+                                                <input type="text" name="comment" value="@item.Comment"
+                                                       placeholder="Add comment (e.g. no salt, rare...)"
+                                                       class="form-control form-control-sm" />
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary">Save</button>
+                                            </form>
+                                        </td>
                                     </tr>
                                 }
                             </tbody>
                             <tfoot>
                                 <tr class="table-light fw-bold">
-                                    <td colspan="2">Total</td>
+                                    <td colspan="3">Total</td>
                                     <td class="text-end">&euro; @Model.TotalPrice.ToString("0.00")</td>
                                 </tr>
                             </tfoot>
                         </table>
 
-                        <form asp-action="SaveOrder" method="post" class="mt-3">
+                        @* Send Order button *@
+                        <form asp-action="SendOrder" method="post" class="mt-2">
                             <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
-                            <button type="submit" class="btn btn-success w-100">
-                                Save Order
+                            <button type="submit" class="btn btn-success w-100">Send Order</button>
+                        </form>
+
+                        @* Cancel Order button *@
+                        <form asp-action="CancelOrder" method="post" class="mt-2">
+                            <input type="hidden" name="orderId" value="@Model.OrderId" />
+                            <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
+                            <button type="submit" class="btn btn-outline-danger w-100"
+                                    onclick="return confirm('Are you sure you want to cancel this order?')">
+                                Cancel Order
                             </button>
                         </form>
                     }
                 </div>
             </div>
-        </div>
 
+        </div>
     </div>
 </div>

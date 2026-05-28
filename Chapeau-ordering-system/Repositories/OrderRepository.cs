@@ -41,74 +41,74 @@ namespace Chapeau_ordering_system.Repositories
 
             try
             {
-            using var conn = new SqlConnection(_connectionString);
-            using var cmd  = new SqlCommand(query, conn);
-            conn.Open();
-            using var reader = cmd.ExecuteReader();
+                using var conn = new SqlConnection(_connectionString);
+                using var cmd = new SqlCommand(query, conn);
+                conn.Open();
+                using var reader = cmd.ExecuteReader();
 
-            while (reader.Read())
-            {
-                int orderId = reader.GetInt32(reader.GetOrdinal("OrderId"));
-
-                if (!orders.TryGetValue(orderId, out Order? order))
+                while (reader.Read())
                 {
-                    order = new Order
+                    int orderId = reader.GetInt32(reader.GetOrdinal("OrderId"));
+
+                    if (!orders.TryGetValue(orderId, out Order? order))
                     {
-                        OrderId   = orderId,
-                        OrderTime = reader.GetDateTime(reader.GetOrdinal("OrderTime")),
-                        Status    = (OrderStatus)reader.GetInt32(reader.GetOrdinal("OrderStatus")),
-                        Table = new RestaurantTable
+                        order = new Order
                         {
-                            TableId       = reader.GetInt32(reader.GetOrdinal("TableId")),
-                            TableNumber   = reader.GetString(reader.GetOrdinal("TableNumber")),
-                            NumberOfSeats = reader.GetInt32(reader.GetOrdinal("NumberOfSeats")),
-                            Status        = (TableStatus)reader.GetInt32(reader.GetOrdinal("TableStatus")),
-                            OccupiedSince = reader.IsDBNull(reader.GetOrdinal("OccupiedSince"))
-                                            ? null
-                                            : reader.GetDateTime(reader.GetOrdinal("OccupiedSince"))
-                        },
-                        Employee = new Employee
+                            OrderId = orderId,
+                            OrderTime = reader.GetDateTime(reader.GetOrdinal("OrderTime")),
+                            Status = (OrderStatus)reader.GetInt32(reader.GetOrdinal("OrderStatus")),
+                            Table = new RestaurantTable
+                            {
+                                TableId = reader.GetInt32(reader.GetOrdinal("TableId")),
+                                TableNumber = reader.GetString(reader.GetOrdinal("TableNumber")),
+                                NumberOfSeats = reader.GetInt32(reader.GetOrdinal("NumberOfSeats")),
+                                Status = (TableStatus)reader.GetInt32(reader.GetOrdinal("TableStatus")),
+                                OccupiedSince = reader.IsDBNull(reader.GetOrdinal("OccupiedSince"))
+                                                ? null
+                                                : reader.GetDateTime(reader.GetOrdinal("OccupiedSince"))
+                            },
+                            Employee = new Employee
+                            {
+                                EmployeeId = reader.GetInt32(reader.GetOrdinal("EmployeeId")),
+                                FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
+                                LastName = reader.GetString(reader.GetOrdinal("LastName"))
+                            }
+                        };
+                        orders[orderId] = order;
+                    }
+
+                    if (!reader.IsDBNull(reader.GetOrdinal("OrderItemId")))
+                    {
+                        order.OrderItems.Add(new OrderItem
                         {
-                            EmployeeId = reader.GetInt32(reader.GetOrdinal("EmployeeId")),
-                            FirstName  = reader.GetString(reader.GetOrdinal("FirstName")),
-                            LastName   = reader.GetString(reader.GetOrdinal("LastName"))
-                        }
-                    };
-                    orders[orderId] = order;
+                            OrderItemId = reader.GetInt32(reader.GetOrdinal("OrderItemId")),
+                            Quantity = reader.GetInt32(reader.GetOrdinal("Quantity")),
+                            Comment = reader.IsDBNull(reader.GetOrdinal("Comment"))
+                                          ? null
+                                          : reader.GetString(reader.GetOrdinal("Comment")),
+                            Status = (OrderItemStatus)reader.GetInt32(reader.GetOrdinal("ItemStatus")),
+                            OrderTime = reader.GetDateTime(reader.GetOrdinal("ItemOrderTime")),
+                            StartedAt = reader.IsDBNull(reader.GetOrdinal("StartedAt"))
+                                          ? default
+                                          : reader.GetDateTime(reader.GetOrdinal("StartedAt")),
+                            ReadyAt = reader.IsDBNull(reader.GetOrdinal("ReadyAt"))
+                                          ? default
+                                          : reader.GetDateTime(reader.GetOrdinal("ReadyAt")),
+                            MenuItem = reader.IsDBNull(reader.GetOrdinal("MenuItemId"))
+                                       ? null
+                                       : new MenuItem
+                                       {
+                                           MenuItemId = reader.GetInt32(reader.GetOrdinal("MenuItemId")),
+                                           Name = reader.GetString(reader.GetOrdinal("MenuItemName")),
+                                           Price = reader.GetDecimal(reader.GetOrdinal("Price")),
+                                           Type = (MenuItemType)reader.GetInt32(reader.GetOrdinal("MenuItemType")),
+                                           Course = (CourseType)reader.GetInt32(reader.GetOrdinal("Course"))
+                                       }
+                        });
+                    }
                 }
 
-                if (!reader.IsDBNull(reader.GetOrdinal("OrderItemId")))
-                {
-                    order.OrderItems.Add(new OrderItem
-                    {
-                        OrderItemId = reader.GetInt32(reader.GetOrdinal("OrderItemId")),
-                        Quantity    = reader.GetInt32(reader.GetOrdinal("Quantity")),
-                        Comment     = reader.IsDBNull(reader.GetOrdinal("Comment"))
-                                      ? null
-                                      : reader.GetString(reader.GetOrdinal("Comment")),
-                        Status      = (OrderItemStatus)reader.GetInt32(reader.GetOrdinal("ItemStatus")),
-                        OrderTime   = reader.GetDateTime(reader.GetOrdinal("ItemOrderTime")),
-                        StartedAt   = reader.IsDBNull(reader.GetOrdinal("StartedAt"))
-                                      ? default
-                                      : reader.GetDateTime(reader.GetOrdinal("StartedAt")),
-                        ReadyAt     = reader.IsDBNull(reader.GetOrdinal("ReadyAt"))
-                                      ? default
-                                      : reader.GetDateTime(reader.GetOrdinal("ReadyAt")),
-                        MenuItem = reader.IsDBNull(reader.GetOrdinal("MenuItemId"))
-                                   ? null
-                                   : new MenuItem
-                                   {
-                                       MenuItemId = reader.GetInt32(reader.GetOrdinal("MenuItemId")),
-                                       Name       = reader.GetString(reader.GetOrdinal("MenuItemName")),
-                                       Price      = reader.GetDecimal(reader.GetOrdinal("Price")),
-                                       Type       = (MenuItemType)reader.GetInt32(reader.GetOrdinal("MenuItemType")),
-                                       Course     = (CourseType)reader.GetInt32(reader.GetOrdinal("Course"))
-                                   }
-                    });
-                }
-            }
-
-            return orders.Values;
+                return orders.Values;
             }
             catch (SqlException)
             {
@@ -116,7 +116,6 @@ namespace Chapeau_ordering_system.Repositories
             }
         }
 
-        // Add new order to the database, returns the generated OrderId
         public int Add(Order order)
         {
             const string query = @"
@@ -141,7 +140,7 @@ namespace Chapeau_ordering_system.Repositories
             }
         }
 
-        // Insert one order item linked to an order
+
         public void AddOrderItem(int orderId, OrderItem item)
         {
             const string query = @"
@@ -167,25 +166,276 @@ namespace Chapeau_ordering_system.Repositories
             }
         }
 
-        // Decrease stock after order is saved
         public void DecreaseStock(int menuItemId, int quantity)
         {
-            const string query = "UPDATE dbo.MenuItems SET Stock = Stock - @Quantity WHERE MenuItemId = @MenuItemId";
+            const string query = @"
+        UPDATE dbo.MenuItems
+        SET Stock = Stock - @Quantity
+        WHERE MenuItemId = @MenuItemId
+          AND Stock >= @Quantity";
+
+            using var conn = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(query, conn);
+
+            cmd.Parameters.AddWithValue("@MenuItemId", menuItemId);
+            cmd.Parameters.AddWithValue("@Quantity", quantity);
+
+            conn.Open();
+
+            int rowsAffected = cmd.ExecuteNonQuery();
+
+            if (rowsAffected == 0)
+            {
+                throw new InvalidOperationException("Not enough stock available for this menu item.");
+            }
+        }
+
+
+        public void UpdateOrderItemQuantity(int orderItemId, int quantity)
+        {
+            const string query = "UPDATE dbo.OrderItems SET Quantity = @Quantity WHERE OrderItemId = @OrderItemId";
 
             try
             {
                 using var conn = new SqlConnection(_connectionString);
                 using var cmd = new SqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@MenuItemId", menuItemId);
+                cmd.Parameters.AddWithValue("@OrderItemId", orderItemId);
                 cmd.Parameters.AddWithValue("@Quantity", quantity);
                 conn.Open();
                 cmd.ExecuteNonQuery();
             }
             catch (Exception ex)
             {
-                throw new Exception("Error decreasing stock: " + ex.Message);
+                throw new Exception("Error updating order item quantity: " + ex.Message);
             }
         }
+
+        public void UpdateOrderItemComment(int orderItemId, string? comment)
+        {
+            const string query = "UPDATE dbo.OrderItems SET Comment = @Comment WHERE OrderItemId = @OrderItemId";
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@OrderItemId", orderItemId);
+                cmd.Parameters.AddWithValue("@Comment", (object?)comment ?? DBNull.Value);
+                conn.Open();
+                cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error updating order item comment: " + ex.Message);
+            }
+        }
+
+        public void RemoveOrderItem(int orderItemId)
+        {
+            const string query = "DELETE FROM dbo.OrderItems WHERE OrderItemId = @OrderItemId";
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@OrderItemId", orderItemId);
+                conn.Open();
+                cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error removing order item: " + ex.Message);
+            }
+        }
+
+        public void CancelOrder(int orderId)
+        {
+            const string deleteItems = "DELETE FROM dbo.OrderItems WHERE OrderId = @OrderId";
+            const string deleteOrder = "DELETE FROM dbo.Orders WHERE OrderId = @OrderId";
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                conn.Open();
+
+                using var cmdItems = new SqlCommand(deleteItems, conn);
+                cmdItems.Parameters.AddWithValue("@OrderId", orderId);
+                cmdItems.ExecuteNonQuery();
+
+                using var cmdOrder = new SqlCommand(deleteOrder, conn);
+                cmdOrder.Parameters.AddWithValue("@OrderId", orderId);
+                cmdOrder.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error cancelling order: " + ex.Message);
+            }
+        }
+
+        public List<OrderItem> GetItemsByOrderId(int orderId)
+        {
+            List<OrderItem> items = new List<OrderItem>();
+            const string query = @"
+        SELECT oi.OrderItemId, oi.Quantity, oi.Comment, oi.Status, oi.OrderTime,
+               mi.MenuItemId, mi.Name, mi.Price, mi.Type, mi.Course, mi.Stock
+        FROM dbo.OrderItems oi
+        INNER JOIN dbo.MenuItems mi ON mi.MenuItemId = oi.MenuItemId
+        WHERE oi.OrderId = @OrderId";
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@OrderId", orderId);
+                conn.Open();
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    items.Add(new OrderItem
+                    {
+                        OrderItemId = reader.GetInt32(reader.GetOrdinal("OrderItemId")),
+                        Quantity = reader.GetInt32(reader.GetOrdinal("Quantity")),
+                        Comment = reader.IsDBNull(reader.GetOrdinal("Comment")) ? null : reader.GetString(reader.GetOrdinal("Comment")),
+                        Status = (OrderItemStatus)reader.GetInt32(reader.GetOrdinal("Status")),
+                        OrderTime = reader.GetDateTime(reader.GetOrdinal("OrderTime")),
+                        MenuItem = new MenuItem
+                        {
+                            MenuItemId = reader.GetInt32(reader.GetOrdinal("MenuItemId")),
+                            Name = reader.GetString(reader.GetOrdinal("Name")),
+                            Price = reader.GetDecimal(reader.GetOrdinal("Price")),
+                            Type = (MenuItemType)reader.GetInt32(reader.GetOrdinal("Type")),
+                            Course = (CourseType)reader.GetInt32(reader.GetOrdinal("Course")),
+                            Stock = reader.GetInt32(reader.GetOrdinal("Stock"))
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error fetching order items: " + ex.Message);
+            }
+            return items;
+        }
+
+
+        public OrderItem? GetOrderItemById(int orderItemId)
+        {
+            const string query = @"
+        SELECT oi.OrderItemId, oi.Quantity, oi.Comment, oi.Status, oi.OrderTime,
+               mi.MenuItemId, mi.Name, mi.Price, mi.Type, mi.Course, mi.Stock
+        FROM dbo.OrderItems oi
+        INNER JOIN dbo.MenuItems mi ON mi.MenuItemId = oi.MenuItemId
+        WHERE oi.OrderItemId = @OrderItemId";
+
+            using var conn = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(query, conn);
+
+            cmd.Parameters.AddWithValue("@OrderItemId", orderItemId);
+
+            conn.Open();
+
+            using var reader = cmd.ExecuteReader();
+
+            return reader.Read()
+                ? MapOrderItemWithMenuItem(reader)
+                : null;
+        }
+
+        public OrderItem? GetOrderItemByOrderAndMenuItem(int orderId, int menuItemId)
+        {
+            const string query = @"
+        SELECT oi.OrderItemId, oi.Quantity, oi.Comment, oi.Status, oi.OrderTime,
+               mi.MenuItemId, mi.Name, mi.Price, mi.Type, mi.Course, mi.Stock
+        FROM dbo.OrderItems oi
+        INNER JOIN dbo.MenuItems mi ON mi.MenuItemId = oi.MenuItemId
+        WHERE oi.OrderId = @OrderId
+          AND oi.MenuItemId = @MenuItemId";
+
+            using var conn = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(query, conn);
+
+            cmd.Parameters.AddWithValue("@OrderId", orderId);
+            cmd.Parameters.AddWithValue("@MenuItemId", menuItemId);
+
+            conn.Open();
+
+            using var reader = cmd.ExecuteReader();
+
+            return reader.Read()
+                ? MapOrderItemWithMenuItem(reader)
+                : null;
+        }
+
+        public MenuItem? GetMenuItemById(int menuItemId)
+        {
+            const string query = @"
+        SELECT MenuItemId, Name, Price, Type, Course, Stock
+        FROM dbo.MenuItems
+        WHERE MenuItemId = @MenuItemId";
+
+            using var conn = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(query, conn);
+
+            cmd.Parameters.AddWithValue("@MenuItemId", menuItemId);
+
+            conn.Open();
+
+            using var reader = cmd.ExecuteReader();
+
+            if (!reader.Read())
+                return null;
+
+            return new MenuItem
+            {
+                MenuItemId = reader.GetInt32(reader.GetOrdinal("MenuItemId")),
+                Name = reader.GetString(reader.GetOrdinal("Name")),
+                Price = reader.GetDecimal(reader.GetOrdinal("Price")),
+                Type = (MenuItemType)reader.GetInt32(reader.GetOrdinal("Type")),
+                Course = (CourseType)reader.GetInt32(reader.GetOrdinal("Course")),
+                Stock = reader.GetInt32(reader.GetOrdinal("Stock"))
+            };
+        }
+
+        public void IncreaseStock(int menuItemId, int quantity)
+        {
+            const string query = @"
+        UPDATE dbo.MenuItems
+        SET Stock = Stock + @Quantity
+        WHERE MenuItemId = @MenuItemId";
+
+            using var conn = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(query, conn);
+
+            cmd.Parameters.AddWithValue("@MenuItemId", menuItemId);
+            cmd.Parameters.AddWithValue("@Quantity", quantity);
+
+            conn.Open();
+
+            cmd.ExecuteNonQuery();
+        }
+
+        private static OrderItem MapOrderItemWithMenuItem(SqlDataReader reader)
+        {
+            return new OrderItem
+            {
+                OrderItemId = reader.GetInt32(reader.GetOrdinal("OrderItemId")),
+                Quantity = reader.GetInt32(reader.GetOrdinal("Quantity")),
+                Comment = reader.IsDBNull(reader.GetOrdinal("Comment"))
+                    ? null
+                    : reader.GetString(reader.GetOrdinal("Comment")),
+                Status = (OrderItemStatus)reader.GetInt32(reader.GetOrdinal("Status")),
+                OrderTime = reader.GetDateTime(reader.GetOrdinal("OrderTime")),
+                MenuItem = new MenuItem
+                {
+                    MenuItemId = reader.GetInt32(reader.GetOrdinal("MenuItemId")),
+                    Name = reader.GetString(reader.GetOrdinal("Name")),
+                    Price = reader.GetDecimal(reader.GetOrdinal("Price")),
+                    Type = (MenuItemType)reader.GetInt32(reader.GetOrdinal("Type")),
+                    Course = (CourseType)reader.GetInt32(reader.GetOrdinal("Course")),
+                    Stock = reader.GetInt32(reader.GetOrdinal("Stock"))
+                }
+            };
+        }
+
 
 
     }
