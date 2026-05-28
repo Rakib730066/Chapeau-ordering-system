@@ -6,12 +6,15 @@ using Chapeau_ordering_system.Services.Interfaces;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
+builder.Services.AddDistributedMemoryCache();
 
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
+    options.Cookie.Name = ".Chapeau.Session";
+    options.Cookie.MaxAge = TimeSpan.FromMinutes(60);
 });
 
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
