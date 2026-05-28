@@ -79,6 +79,15 @@
                             }
                         }
                     }
+              
+
+                @if (t.IsFree)
+                {
+                    <form asp-controller="Order" asp-action="StartOrder" method="post" class="mt-2">
+                        <input type="hidden" name="tableId" value="@t.TableId" />
+                        <button type="submit" class="btn btn-sm btn-primary w-100">Take Order</button>
+                    </form>
+                }
                 </div>
             </div>
         }

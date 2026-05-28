@@ -25,5 +25,10 @@ namespace Chapeau_ordering_system.Services
         {
             return _menuItemRepository.GetFiltered(type, course);
         }
+
+        public MenuItem? GetMenuItemById(int menuItemId)
+        {
+            return _menuItemRepository.GetById(menuItemId);
+        }
     }
 }

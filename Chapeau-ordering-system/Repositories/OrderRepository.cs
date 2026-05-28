@@ -115,5 +115,78 @@ namespace Chapeau_ordering_system.Repositories
                 return orders.Values;
             }
         }
+
+        // Add new order to the database, returns the generated OrderId
+        public int Add(Order order)
+        {
+            const string query = @"
+        INSERT INTO dbo.Orders (TableId, EmployeeId, OrderTime, Status)
+        OUTPUT INSERTED.OrderId
+        VALUES (@TableId, @EmployeeId, @OrderTime, @Status)";
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@TableId", order.Table!.TableId);
+                cmd.Parameters.AddWithValue("@EmployeeId", order.Employee!.EmployeeId);
+                cmd.Parameters.AddWithValue("@OrderTime", order.OrderTime);
+                cmd.Parameters.AddWithValue("@Status", (int)order.Status);
+                conn.Open();
+                return (int)cmd.ExecuteScalar();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error adding order: " + ex.Message);
+            }
+        }
+
+        // Insert one order item linked to an order
+        public void AddOrderItem(int orderId, OrderItem item)
+        {
+            const string query = @"
+        INSERT INTO dbo.OrderItems (OrderId, MenuItemId, Quantity, Comment, Status, OrderTime)
+        VALUES (@OrderId, @MenuItemId, @Quantity, @Comment, @Status, @OrderTime)";
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@OrderId", orderId);
+                cmd.Parameters.AddWithValue("@MenuItemId", item.MenuItem!.MenuItemId);
+                cmd.Parameters.AddWithValue("@Quantity", item.Quantity);
+                cmd.Parameters.AddWithValue("@Comment", (object?)item.Comment ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@Status", (int)item.Status);
+                cmd.Parameters.AddWithValue("@OrderTime", item.OrderTime);
+                conn.Open();
+                cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error adding order item: " + ex.Message);
+            }
+        }
+
+        // Decrease stock after order is saved
+        public void DecreaseStock(int menuItemId, int quantity)
+        {
+            const string query = "UPDATE dbo.MenuItems SET Stock = Stock - @Quantity WHERE MenuItemId = @MenuItemId";
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@MenuItemId", menuItemId);
+                cmd.Parameters.AddWithValue("@Quantity", quantity);
+                conn.Open();
+                cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error decreasing stock: " + ex.Message);
+            }
+        }
+
+
     }
 }
