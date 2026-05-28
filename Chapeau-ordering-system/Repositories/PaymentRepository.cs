@@ -98,5 +98,70 @@ namespace Chapeau_ordering_system.Repositories
 
             return order;
         }
+
+        // Inserts the payment, marks order as Paid, and marks table as Free.
+        // All three happen inside a transaction so the database stays consistent.
+        public void FinishOrder(Payment payment)
+        {
+            using SqlConnection conn = new SqlConnection(_connectionString);
+            conn.Open();
+
+            using SqlTransaction transaction = conn.BeginTransaction();
+
+            try
+            {
+                // 1. Insert the payment row
+                string insertPayment = @"
+                    INSERT INTO dbo.Payments
+                        (OrderId, Amount, TipAmount, VatLowAmount, VatHighAmount,
+                         PaymentMethod, Feedback, PaidAt)
+                    VALUES
+                        (@OrderId, @Amount, @TipAmount, @VatLow, @VatHigh,
+                         @Method, @Feedback, @PaidAt)";
+
+                SqlCommand cmd1 = new SqlCommand(insertPayment, conn, transaction);
+                cmd1.Parameters.Add("@OrderId", System.Data.SqlDbType.Int).Value = payment.OrderId;
+                cmd1.Parameters.Add("@Amount", System.Data.SqlDbType.Decimal).Value = payment.Amount;
+                cmd1.Parameters.Add("@TipAmount", System.Data.SqlDbType.Decimal).Value = payment.TipAmount;
+                cmd1.Parameters.Add("@VatLow", System.Data.SqlDbType.Decimal).Value = payment.VatLowAmount;
+                cmd1.Parameters.Add("@VatHigh", System.Data.SqlDbType.Decimal).Value = payment.VatHighAmount;
+                cmd1.Parameters.Add("@Method", System.Data.SqlDbType.Int).Value = (int)payment.PaymentMethod;
+                cmd1.Parameters.Add("@Feedback", System.Data.SqlDbType.NVarChar).Value =
+                    (object?)payment.Feedback ?? DBNull.Value;
+                cmd1.Parameters.Add("@PaidAt", System.Data.SqlDbType.DateTime).Value = payment.PaidAt;
+                cmd1.ExecuteNonQuery();
+
+                // 2. Mark the order as Paid
+                string updateOrder = @"
+                    UPDATE dbo.Orders
+                    SET Status = @PaidStatus
+                    WHERE OrderId = @OrderId";
+
+                SqlCommand cmd2 = new SqlCommand(updateOrder, conn, transaction);
+                cmd2.Parameters.Add("@PaidStatus", System.Data.SqlDbType.Int).Value = (int)OrderStatus.Paid;
+                cmd2.Parameters.Add("@OrderId", System.Data.SqlDbType.Int).Value = payment.OrderId;
+                cmd2.ExecuteNonQuery();
+
+                // 3. Mark the table as Free (Status = 0 in TableStatus)
+                string updateTable = @"
+                    UPDATE dbo.Tables
+                    SET Status = 0,
+                        CurrentOrderId = NULL,
+                        OccupiedSince = NULL,
+                        LastUpdated = SYSUTCDATETIME()
+                    WHERE TableId = (SELECT TableId FROM dbo.Orders WHERE OrderId = @OrderId)";
+
+                SqlCommand cmd3 = new SqlCommand(updateTable, conn, transaction);
+                cmd3.Parameters.Add("@OrderId", System.Data.SqlDbType.Int).Value = payment.OrderId;
+                cmd3.ExecuteNonQuery();
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
     }
 }
