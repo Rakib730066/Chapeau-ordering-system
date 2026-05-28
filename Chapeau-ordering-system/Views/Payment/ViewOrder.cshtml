@@ -1,0 +1,41 @@
+﻿@model Chapeau_ordering_system.ViewModels.OrderPaymentViewModel
+
+@{
+    ViewData["Title"] = "Order Overview";
+}
+
+<div class="container mt-4">
+    <h2>Order for Table @Model.TableNumber</h2>
+
+    <table class="table mt-3">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Line Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var line in Model.Lines)
+            {
+                <tr>
+                    <td>@line.MenuItemName</td>
+                    <td>@line.Quantity</td>
+                    <td>€@line.UnitPrice.ToString("0.00")</td>
+                    <td>€@line.LineTotal.ToString("0.00")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <hr />
+
+    <div>
+        <p>VAT 9% (low): <strong>€@Model.VatLow.ToString("0.00")</strong></p>
+        <p>VAT 21% (high): <strong>€@Model.VatHigh.ToString("0.00")</strong></p>
+        <h3>Total to pay: €@Model.TotalInclVat.ToString("0.00")</h3>
+    </div>
+
+    <a asp-controller="RestaurantOverview" asp-action="Index" class="btn btn-secondary mt-3">Back</a>
+</div>
