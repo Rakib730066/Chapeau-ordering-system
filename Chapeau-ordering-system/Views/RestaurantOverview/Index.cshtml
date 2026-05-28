@@ -41,6 +41,21 @@
         </span>
     </div>
 
+    @if (TempData["ErrorMessage"] is string errorMessage)
+    {
+        <div class="alert alert-danger">
+            @errorMessage
+        </div>
+    }
+
+    @if (TempData["ConfirmMessage"] is string confirmMessage)
+    {
+        <div class="alert alert-success">
+            @confirmMessage
+        </div>
+    }
+
+
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="mb-0">Tables</h5>
         <form method="get" asp-action="Index">
@@ -79,15 +94,21 @@
                             }
                         }
                     }
-              
 
-                @if (t.IsFree)
-                {
-                    <form asp-controller="Order" asp-action="StartOrder" method="post" class="mt-2">
-                        <input type="hidden" name="tableId" value="@t.TableId" />
-                        <button type="submit" class="btn btn-sm btn-primary w-100">Take Order</button>
-                    </form>
-                }
+                    @if (t.IsFree)
+                    {
+                        <form asp-controller="Order" asp-action="StartOrder" method="post" class="mt-2">
+                            <input type="hidden" name="tableId" value="@t.TableId" />
+                            <button type="submit" class="btn btn-sm btn-primary w-100">Start Order</button>
+                        </form>
+                    }
+                    else if (t.Status == TableStatus.Occupied && t.CurrentOrderId.HasValue)
+                    {
+                        <form asp-controller="Order" asp-action="LoadOrder" method="post" class="mt-2">
+                            <input type="hidden" name="tableId" value="@t.TableId" />
+                            <button type="submit" class="btn btn-sm btn-warning w-100">Load Order</button>
+                        </form>
+                    }
                 </div>
             </div>
         }
