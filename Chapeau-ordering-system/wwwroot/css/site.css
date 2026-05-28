@@ -20,3 +20,26 @@ html {
 body {
   margin-bottom: 60px;
 }
+
+.menu-section {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.menu-section td {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-top: 2px solid #dee2e6;
+}
+
+.menu-subsection {
+  background-color: #fcfcfd;
+  font-weight: 600;
+}
+
+.menu-subsection td {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-top: 1px solid #e9ecef;
+}
