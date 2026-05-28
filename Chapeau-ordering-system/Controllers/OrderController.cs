@@ -3,7 +3,8 @@ using Chapeau_ordering_system.Models.Enums;
 using Chapeau_ordering_system.Services.Interfaces;
 using Chapeau_ordering_system.ViewModels;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json;
+
+
 
 namespace Chapeau_ordering_system.Controllers
 {
@@ -12,9 +13,7 @@ namespace Chapeau_ordering_system.Controllers
         private readonly IMenuItemService _menuItemService;
         private readonly IOrderService _orderService;
 
-        // Session keys
         private const string SessionOrderId = "CurrentOrderId";
-        private const string SessionOrderItems = "CurrentOrderItems";
 
         public OrderController(IMenuItemService menuItemService, IOrderService orderService)
         {
@@ -22,7 +21,52 @@ namespace Chapeau_ordering_system.Controllers
             _orderService = orderService;
         }
 
-        // Sprint 1 — Show the menu for a table with optional filters
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult StartOrder(int tableId)
+        {
+            int? employeeId = HttpContext.Session.GetInt32("EmployeeId");
+
+            if (employeeId == null)
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            try
+            {
+                int orderId = _orderService.StartOrder(tableId, employeeId.Value);
+
+                HttpContext.Session.SetInt32(SessionOrderId, orderId);
+
+                return RedirectToAction("TakeOrder", new { tableId });
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["ErrorMessage"] = ex.Message;
+                return RedirectToAction("Menu", new { tableId });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult LoadOrder(int tableId)
+        {
+            Order? order = _orderService.GetOpenOrders()
+                .FirstOrDefault(o => o.Table?.TableId == tableId);
+
+            if (order == null)
+            {
+                TempData["ErrorMessage"] = "No open order found for this table.";
+                return RedirectToAction("Menu", new { tableId });
+            }
+
+            HttpContext.Session.SetInt32(SessionOrderId, order.OrderId);
+
+            return RedirectToAction("TakeOrder", new { tableId });
+        }
+
+
         [HttpGet]
         public IActionResult Menu(int tableId, MenuItemType? type, CourseType? course)
         {
@@ -36,26 +80,17 @@ namespace Chapeau_ordering_system.Controllers
             return View(viewModel);
         }
 
-        // Sprint 2 — Start a new order for a table and go to TakeOrder page
-        [HttpPost]
-        public IActionResult StartOrder(int tableId)
-        {
-            int employeeId = HttpContext.Session.GetInt32("EmployeeId") ?? 0;
-            int orderId = _orderService.StartOrder(tableId, employeeId);
-
-            // Store orderId and empty item list in session
-            HttpContext.Session.SetInt32(SessionOrderId, orderId);
-            HttpContext.Session.SetString(SessionOrderItems, JsonSerializer.Serialize(new List<OrderItem>()));
-
-            return RedirectToAction("TakeOrder", new { tableId });
-        }
-
-        // Sprint 2 — Show the TakeOrder page (menu + running order list)
         [HttpGet]
         public IActionResult TakeOrder(int tableId, MenuItemType? type, CourseType? course)
         {
             int orderId = HttpContext.Session.GetInt32(SessionOrderId) ?? 0;
-            List<OrderItem> currentItems = GetItemsFromSession();
+
+            if (orderId == 0)
+            {
+                return RedirectToAction("Menu", new { tableId, type, course });
+            }
+
+            List<OrderItem> currentItems = _orderService.GetItemsByOrderId(orderId);
 
             TakeOrderViewModel viewModel = new TakeOrderViewModel
             {
@@ -68,80 +103,140 @@ namespace Chapeau_ordering_system.Controllers
                     ActiveCourse = course,
                     TableId = tableId
                 },
-                ConfirmationMessage = TempData["ConfirmMessage"] as string
+                ConfirmationMessage = TempData["ConfirmMessage"] as string,
+                ErrorMessage = TempData["ErrorMessage"] as string
             };
 
             return View(viewModel);
         }
 
-        // Sprint 2 — Add a menu item to the in-progress order (increments if already exists)
         [HttpPost]
-        [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult AddItem(int menuItemId, int tableId, MenuItemType? type, CourseType? course)
         {
-            List<OrderItem> currentItems = GetItemsFromSession();
+            int orderId = HttpContext.Session.GetInt32(SessionOrderId) ?? 0;
 
-            OrderItem? existing = currentItems.FirstOrDefault(i => i.MenuItem!.MenuItemId == menuItemId);
-            if (existing != null)
+            if (orderId == 0)
             {
-                existing.Quantity++;
-            }
-            else
-            {
-                MenuItem? menuItem = _menuItemService.GetMenuItemById(menuItemId);
-                if (menuItem != null)
-                {
-                    currentItems.Add(new OrderItem
-                    {
-                        MenuItem = menuItem,
-                        Quantity = 1,
-                        Status = OrderItemStatus.Ordered,
-                        OrderTime = DateTime.Now
-                    });
-                }
+                TempData["ErrorMessage"] = "Please start an order before adding items.";
+                return RedirectToAction("Menu", new { tableId, type = (int?)type, course = (int?)course });
             }
 
-            SaveItemsToSession(currentItems);
+            try
+            {
+                _orderService.AddItemToOrder(orderId, menuItemId);
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["ErrorMessage"] = ex.Message;
+            }
 
-            // Pass the filter values back so the page stays on the same filter
             return RedirectToAction("TakeOrder", new { tableId, type = (int?)type, course = (int?)course });
         }
 
-        // Sprint 2 — Save the order to the database and return to overview
+
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult SaveOrder(int tableId)
         {
             int orderId = HttpContext.Session.GetInt32(SessionOrderId) ?? 0;
-            List<OrderItem> currentItems = GetItemsFromSession();
 
-            if (orderId > 0 && currentItems.Any())
+            if (orderId == 0)
             {
-                _orderService.SaveOrder(orderId, currentItems);
-
-                // Clear session after saving
-                HttpContext.Session.Remove(SessionOrderId);
-                HttpContext.Session.Remove(SessionOrderItems);
-
-                TempData["ConfirmMessage"] = "Order saved successfully!";
+                TempData["ErrorMessage"] = "No active order found.";
+                return RedirectToAction("Menu", new { tableId });
             }
+
+            HttpContext.Session.Remove(SessionOrderId);
+            TempData["ConfirmMessage"] = "Order sent successfully.";
 
             return RedirectToAction("Index", "RestaurantOverview");
         }
 
-        // Helper — read current order items from session
-        private List<OrderItem> GetItemsFromSession()
-        {
-            string? json = HttpContext.Session.GetString(SessionOrderItems);
-            if (string.IsNullOrEmpty(json))
-                return new List<OrderItem>();
 
-            return JsonSerializer.Deserialize<List<OrderItem>>(json) ?? new List<OrderItem>();
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult IncreaseItem(int orderItemId, int currentQuantity, int tableId)
+        {
+            try
+            {
+                _orderService.IncreaseItemQuantity(orderItemId, currentQuantity);
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["ErrorMessage"] = ex.Message;
+            }
+
+            return RedirectToAction("TakeOrder", new { tableId });
         }
 
-        // Helper — save current order items to session
-        private void SaveItemsToSession(List<OrderItem> items)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult DecreaseItem(int orderItemId, int currentQuantity, int tableId)
         {
-            HttpContext.Session.SetString(SessionOrderItems, JsonSerializer.Serialize(items));
+            try
+            {
+                _orderService.DecreaseItemQuantity(orderItemId, currentQuantity);
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["ErrorMessage"] = ex.Message;
+            }
+
+            return RedirectToAction("TakeOrder", new { tableId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult UpdateComment(int orderItemId, string? comment, int tableId)
+        {
+            try
+            {
+                _orderService.UpdateItemComment(orderItemId, comment);
+                TempData["ConfirmMessage"] = "Comment updated successfully!";
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["ErrorMessage"] = ex.Message;
+            }
+
+            return RedirectToAction("TakeOrder", new { tableId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult RemoveItem(int orderItemId, int tableId)
+        {
+            try
+            {
+                _orderService.RemoveItem(orderItemId);
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["ErrorMessage"] = ex.Message;
+            }
+
+            return RedirectToAction("TakeOrder", new { tableId });
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult CancelOrder(int orderId, int tableId)
+        {
+            try
+            {
+                _orderService.CancelOrder(orderId, tableId);
+
+                HttpContext.Session.Remove(SessionOrderId);
+                TempData["ConfirmMessage"] = "Order cancelled successfully.";
+
+                return RedirectToAction("Index", "RestaurantOverview");
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["ErrorMessage"] = ex.Message;
+
+                return RedirectToAction("TakeOrder", new { tableId });
+            }
         }
     }
 }
