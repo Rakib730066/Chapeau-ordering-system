@@ -13,17 +13,13 @@ namespace Chapeau_ordering_system.Services
         {
             _menuItemRepository = menuItemRepository;
         }
-
-        // Get all menu items
         public List<MenuItem> GetAllMenuItems()
         {
             return _menuItemRepository.GetAll();
         }
-
-        // Get menu items filtered by card type (drinks/food) and course (starters/mains/etc.)
-        public List<MenuItem> GetFilteredMenuItems(MenuItemType? type, CourseType? course)
+        public List<MenuItem> GetFilteredMenuItems(MenuItemType? type, CourseType? course, CardType? card)
         {
-            return _menuItemRepository.GetFiltered(type, course);
+            return _menuItemRepository.GetFiltered(type, course, card);
         }
 
         public MenuItem? GetMenuItemById(int menuItemId)
