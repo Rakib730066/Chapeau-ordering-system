@@ -5,13 +5,10 @@ namespace Chapeau_ordering_system.Repositories.Interfaces
 {
     public interface IMenuItemRepository
     {
-        // Get all menu items
         List<MenuItem> GetAll();
-
-        // Get menu items filtered by type and/or course (filtering done in SQL)
-        List<MenuItem> GetFiltered(MenuItemType? type, CourseType? course);
-
-        // Get single menu item by id
+        List<MenuItem> GetFiltered(MenuItemType? type, CourseType? course,CardType? card);
         MenuItem? GetById(int menuItemId);
+        void DecreaseStock(int menuItemId, int quantity);
+        void IncreaseStock(int menuItemId, int quantity);
     }
 }

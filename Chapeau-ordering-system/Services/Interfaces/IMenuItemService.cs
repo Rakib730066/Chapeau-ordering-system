@@ -7,7 +7,7 @@ namespace Chapeau_ordering_system.Services.Interfaces
     {
       
         List<MenuItem> GetAllMenuItems();
-        List<MenuItem> GetFilteredMenuItems(MenuItemType? type, CourseType? course);
+        List<MenuItem> GetFilteredMenuItems(MenuItemType? type, CourseType? course, CardType? card);
         MenuItem? GetMenuItemById(int menuItemId);
     }
 }

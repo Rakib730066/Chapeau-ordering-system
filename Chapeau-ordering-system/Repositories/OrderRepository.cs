@@ -116,6 +116,115 @@ namespace Chapeau_ordering_system.Repositories
             }
         }
 
+
+        public Order? GetOrderById(int orderId)
+        {
+            const string query = @"
+                SELECT
+                    o.OrderId, o.OrderTime, o.Status          AS OrderStatus,
+                    t.TableId, t.TableNumber, t.NumberOfSeats,
+                    t.Status                                  AS TableStatus,
+                    t.OccupiedSince,
+                    e.EmployeeId, e.FirstName, e.LastName
+                FROM dbo.Orders o
+                INNER JOIN dbo.Tables    t ON t.TableId    = o.TableId
+                INNER JOIN dbo.Employees e ON e.EmployeeId = o.EmployeeId
+                WHERE o.OrderId = @OrderId";
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@OrderId", orderId);
+                conn.Open();
+                using var reader = cmd.ExecuteReader();
+
+                if (!reader.Read()) return null;
+
+                return new Order
+                {
+                    OrderId = reader.GetInt32(reader.GetOrdinal("OrderId")),
+                    OrderTime = reader.GetDateTime(reader.GetOrdinal("OrderTime")),
+                    Status = (OrderStatus)reader.GetInt32(reader.GetOrdinal("OrderStatus")),
+                    Table = new RestaurantTable
+                    {
+                        TableId = reader.GetInt32(reader.GetOrdinal("TableId")),
+                        TableNumber = reader.GetString(reader.GetOrdinal("TableNumber")),
+                        NumberOfSeats = reader.GetInt32(reader.GetOrdinal("NumberOfSeats")),
+                        Status = (TableStatus)reader.GetInt32(reader.GetOrdinal("TableStatus")),
+                        OccupiedSince = reader.IsDBNull(reader.GetOrdinal("OccupiedSince"))
+                                        ? null
+                                        : reader.GetDateTime(reader.GetOrdinal("OccupiedSince"))
+                    },
+                    Employee = new Employee
+                    {
+                        EmployeeId = reader.GetInt32(reader.GetOrdinal("EmployeeId")),
+                        FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
+                        LastName = reader.GetString(reader.GetOrdinal("LastName"))
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error fetching order by id: " + ex.Message);
+            }
+        }
+
+        public Order? GetOrderByTableId(int tableId)
+        {
+            const string query = @"
+                SELECT
+                    o.OrderId, o.OrderTime, o.Status          AS OrderStatus,
+                    t.TableId, t.TableNumber, t.NumberOfSeats,
+                    t.Status                                  AS TableStatus,
+                    t.OccupiedSince,
+                    e.EmployeeId, e.FirstName, e.LastName
+                FROM dbo.Orders o
+                INNER JOIN dbo.Tables    t ON t.TableId    = o.TableId
+                INNER JOIN dbo.Employees e ON e.EmployeeId = o.EmployeeId
+                WHERE o.TableId = @TableId
+                AND   o.Status  = 1
+                ORDER BY o.OrderTime DESC";
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@TableId", tableId);
+                conn.Open();
+                using var reader = cmd.ExecuteReader();
+
+                if (!reader.Read()) return null;
+
+                return new Order
+                {
+                    OrderId = reader.GetInt32(reader.GetOrdinal("OrderId")),
+                    OrderTime = reader.GetDateTime(reader.GetOrdinal("OrderTime")),
+                    Status = (OrderStatus)reader.GetInt32(reader.GetOrdinal("OrderStatus")),
+                    Table = new RestaurantTable
+                    {
+                        TableId = reader.GetInt32(reader.GetOrdinal("TableId")),
+                        TableNumber = reader.GetString(reader.GetOrdinal("TableNumber")),
+                        NumberOfSeats = reader.GetInt32(reader.GetOrdinal("NumberOfSeats")),
+                        Status = (TableStatus)reader.GetInt32(reader.GetOrdinal("TableStatus")),
+                        OccupiedSince = reader.IsDBNull(reader.GetOrdinal("OccupiedSince"))
+                                        ? null
+                                        : reader.GetDateTime(reader.GetOrdinal("OccupiedSince"))
+                    },
+                    Employee = new Employee
+                    {
+                        EmployeeId = reader.GetInt32(reader.GetOrdinal("EmployeeId")),
+                        FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
+                        LastName = reader.GetString(reader.GetOrdinal("LastName"))
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error fetching order by table id: " + ex.Message);
+            }
+        }
+
         public int Add(Order order)
         {
             const string query = @"
@@ -249,19 +358,28 @@ namespace Chapeau_ordering_system.Repositories
 
         public void CancelOrder(int orderId)
         {
-            const string deleteItems = "DELETE FROM dbo.OrderItems WHERE OrderId = @OrderId";
-            const string deleteOrder = "DELETE FROM dbo.Orders WHERE OrderId = @OrderId";
+            // Use UPDATE instead of DELETE so order history is preserved
+            // for Payment and Bar/Kitchen modules
+            const string cancelItems = @"
+                UPDATE dbo.OrderItems
+                SET    Status = 5
+                WHERE  OrderId = @OrderId";
+
+            const string cancelOrder = @"
+                UPDATE dbo.Orders
+                SET    Status = 3
+                WHERE  OrderId = @OrderId";
 
             try
             {
                 using var conn = new SqlConnection(_connectionString);
                 conn.Open();
 
-                using var cmdItems = new SqlCommand(deleteItems, conn);
+                using var cmdItems = new SqlCommand(cancelItems, conn);
                 cmdItems.Parameters.AddWithValue("@OrderId", orderId);
                 cmdItems.ExecuteNonQuery();
 
-                using var cmdOrder = new SqlCommand(deleteOrder, conn);
+                using var cmdOrder = new SqlCommand(cancelOrder, conn);
                 cmdOrder.Parameters.AddWithValue("@OrderId", orderId);
                 cmdOrder.ExecuteNonQuery();
             }
@@ -314,6 +432,26 @@ namespace Chapeau_ordering_system.Repositories
                 throw new Exception("Error fetching order items: " + ex.Message);
             }
             return items;
+        }
+
+        public void UpdateOrderStatus(int orderId, OrderStatus status)
+        {
+            const string query = "UPDATE dbo.Orders SET Status = @Status WHERE OrderId = @OrderId";
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                using var cmd = new SqlCommand(query, conn);
+
+                cmd.Parameters.AddWithValue("@OrderId", orderId);
+                cmd.Parameters.AddWithValue("@Status", (int)status);
+
+                conn.Open();
+                cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error updating order status: " + ex.Message);
+            }
         }
 
 

@@ -60,12 +60,30 @@ namespace Chapeau_ordering_system.Services
 
         public void SaveOrder(int orderId, List<OrderItem> items)
         {
-            foreach (OrderItem item in items)
+            if (orderId <= 0)
+                throw new InvalidOperationException("Invalid order.");
+
+            if (!items.Any())
+                throw new InvalidOperationException("Order cannot be empty. Add items before sending.");
+
+            using var scope = new TransactionScope(TransactionScopeOption.Required);
+
+            try
             {
-                _orderRepository.AddOrderItem(orderId, item);
-                _orderRepository.DecreaseStock(item.MenuItem!.MenuItemId, item.Quantity);
+                // Items have already been added during AddItemToOrder
+                // Stock has already been decreased during AddItemToOrder
+                // Just update order status to Submitted so bar/kitchen can see it
+                _orderRepository.UpdateOrderStatus(orderId, OrderStatus.Submitted);
+
+                scope.Complete();
+            }
+            catch (Exception ex)
+            {
+                scope.Dispose();
+                throw new InvalidOperationException($"Failed to save order: {ex.Message}");
             }
         }
+
 
         public void IncreaseItemQuantity(int orderItemId, int currentQuantity)
         {
@@ -192,6 +210,22 @@ namespace Chapeau_ordering_system.Services
             }
 
             scope.Complete();
+        }
+
+        public Order? GetOrderById(int orderId)
+        {
+            return _orderRepository.GetOpenOrders()
+                .FirstOrDefault(o => o.OrderId == orderId);
+        }
+        public Order? GetOrderByTableId(int tableId)
+        {
+            if (tableId <= 0)
+                throw new InvalidOperationException("Invalid table.");
+
+            Order? order = _orderRepository.GetOpenOrders()
+                .FirstOrDefault(o => o.Table?.TableId == tableId);         
+
+            return order;
         }
     }
 }

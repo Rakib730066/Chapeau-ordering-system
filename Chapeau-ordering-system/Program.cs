@@ -19,8 +19,12 @@ builder.Services.AddSession(options =>
 
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+
 builder.Services.AddScoped<ITableRepository, TableRepository>();
 builder.Services.AddScoped<ITableService, TableService>();
+
+builder.Services.AddScoped<IMenuItemRepository, MenuItemRepository>();
+builder.Services.AddScoped<IMenuItemService, MenuItemService>();
 
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderService, OrderService>();
@@ -28,8 +32,6 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IBarKitchenRepository, DummyBarKitchenRepository>();
 builder.Services.AddScoped<IBarKitchenService, BarKitchenService>();
 
-builder.Services.AddScoped<IMenuItemRepository, MenuItemRepository>();
-builder.Services.AddScoped<IMenuItemService, MenuItemService>();
 
 
 var app = builder.Build();

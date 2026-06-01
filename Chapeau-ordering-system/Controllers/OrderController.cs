@@ -4,8 +4,6 @@ using Chapeau_ordering_system.Services.Interfaces;
 using Chapeau_ordering_system.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 
-
-
 namespace Chapeau_ordering_system.Controllers
 {
     public class OrderController : Controller
@@ -21,7 +19,6 @@ namespace Chapeau_ordering_system.Controllers
             _orderService = orderService;
         }
 
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult StartOrder(int tableId)
@@ -36,8 +33,7 @@ namespace Chapeau_ordering_system.Controllers
             try
             {
                 int orderId = _orderService.StartOrder(tableId, employeeId.Value);
-
-                HttpContext.Session.SetInt32(SessionOrderId, orderId);
+                SetOrderSession(orderId);
 
                 return RedirectToAction("TakeOrder", new { tableId });
             }
@@ -52,42 +48,47 @@ namespace Chapeau_ordering_system.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult LoadOrder(int tableId)
         {
-            Order? order = _orderService.GetOpenOrders()
-                .FirstOrDefault(o => o.Table?.TableId == tableId);
-
-            if (order == null)
+            try
             {
-                TempData["ErrorMessage"] = "No open order found for this table.";
+                Order? order = _orderService.GetOrderByTableId(tableId);
+                if (order == null)
+                {
+                    TempData["ErrorMessage"] = "No active order found for this table.";
+                    return RedirectToAction("Menu", new { tableId });
+                }
+                SetOrderSession(order.OrderId);
+
+                return RedirectToAction("TakeOrder", new { tableId });
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["ErrorMessage"] = ex.Message;
                 return RedirectToAction("Menu", new { tableId });
             }
-
-            HttpContext.Session.SetInt32(SessionOrderId, order.OrderId);
-
-            return RedirectToAction("TakeOrder", new { tableId });
         }
 
-
         [HttpGet]
-        public IActionResult Menu(int tableId, MenuItemType? type, CourseType? course)
+        public IActionResult Menu(int tableId, MenuItemType? type, CourseType? course, CardType? card)
         {
             MenuViewModel viewModel = new MenuViewModel
             {
-                MenuItems = _menuItemService.GetFilteredMenuItems(type, course),
+                MenuItems = _menuItemService.GetFilteredMenuItems(type, course, card),
                 ActiveType = type,
                 ActiveCourse = course,
+                ActiveCard = card,
                 TableId = tableId
             };
             return View(viewModel);
         }
 
         [HttpGet]
-        public IActionResult TakeOrder(int tableId, MenuItemType? type, CourseType? course)
+        public IActionResult TakeOrder(int tableId, MenuItemType? type, CourseType? course, CardType? card)
         {
-            int orderId = HttpContext.Session.GetInt32(SessionOrderId) ?? 0;
+            int orderId = GetOrderSession();
 
             if (orderId == 0)
             {
-                return RedirectToAction("Menu", new { tableId, type, course });
+                return RedirectToAction("Menu", new { tableId, type, course, card });
             }
 
             List<OrderItem> currentItems = _orderService.GetItemsByOrderId(orderId);
@@ -98,9 +99,10 @@ namespace Chapeau_ordering_system.Controllers
                 CurrentItems = currentItems,
                 Menu = new MenuViewModel
                 {
-                    MenuItems = _menuItemService.GetFilteredMenuItems(type, course),
+                    MenuItems = _menuItemService.GetFilteredMenuItems(type, course, card),
                     ActiveType = type,
                     ActiveCourse = course,
+                    ActiveCard = card,
                     TableId = tableId
                 },
                 ConfirmationMessage = TempData["ConfirmMessage"] as string,
@@ -114,7 +116,7 @@ namespace Chapeau_ordering_system.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult AddItem(int menuItemId, int tableId, MenuItemType? type, CourseType? course)
         {
-            int orderId = HttpContext.Session.GetInt32(SessionOrderId) ?? 0;
+            int orderId = GetOrderSession();
 
             if (orderId == 0)
             {
@@ -131,15 +133,14 @@ namespace Chapeau_ordering_system.Controllers
                 TempData["ErrorMessage"] = ex.Message;
             }
 
-            return RedirectToAction("TakeOrder", new { tableId, type = (int?)type, course = (int?)course });
+            return RedirectToTakeOrder(tableId, type, course);
         }
-
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult SaveOrder(int tableId)
+        public IActionResult SendOrder(int tableId)
         {
-            int orderId = HttpContext.Session.GetInt32(SessionOrderId) ?? 0;
+            int orderId = GetOrderSession();
 
             if (orderId == 0)
             {
@@ -147,12 +148,19 @@ namespace Chapeau_ordering_system.Controllers
                 return RedirectToAction("Menu", new { tableId });
             }
 
-            HttpContext.Session.Remove(SessionOrderId);
-            TempData["ConfirmMessage"] = "Order sent successfully.";
-
-            return RedirectToAction("Index", "RestaurantOverview");
+            try
+            {
+                ValidateAndSendOrder(orderId);
+                ClearOrderSession();
+                TempData["ConfirmMessage"] = "Order sent successfully to the kitchen.";
+                return RedirectToAction("Index", "RestaurantOverview");
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["ErrorMessage"] = ex.Message;
+                return RedirectToAction("TakeOrder", new { tableId });
+            }
         }
-
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -218,6 +226,7 @@ namespace Chapeau_ordering_system.Controllers
 
             return RedirectToAction("TakeOrder", new { tableId });
         }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult CancelOrder(int orderId, int tableId)
@@ -225,8 +234,7 @@ namespace Chapeau_ordering_system.Controllers
             try
             {
                 _orderService.CancelOrder(orderId, tableId);
-
-                HttpContext.Session.Remove(SessionOrderId);
+                ClearOrderSession();
                 TempData["ConfirmMessage"] = "Order cancelled successfully.";
 
                 return RedirectToAction("Index", "RestaurantOverview");
@@ -234,9 +242,41 @@ namespace Chapeau_ordering_system.Controllers
             catch (InvalidOperationException ex)
             {
                 TempData["ErrorMessage"] = ex.Message;
-
                 return RedirectToAction("TakeOrder", new { tableId });
             }
+        }
+
+        private void ValidateAndSendOrder(int orderId)
+        {
+            Order? order = _orderService.GetOrderById(orderId);
+
+            if (order == null)
+                throw new InvalidOperationException("Order not found.");
+
+            if (!order.OrderItems.Any())
+                throw new InvalidOperationException("Order cannot be empty. Add items before sending.");
+
+            _orderService.SaveOrder(orderId, order.OrderItems);
+        }
+
+        private IActionResult RedirectToTakeOrder(int tableId, MenuItemType? type = null, CourseType? course = null)
+        {
+            return RedirectToAction("TakeOrder", new { tableId, type = (int?)type, course = (int?)course });
+        }
+
+        private int GetOrderSession()
+        {
+            return HttpContext.Session.GetInt32(SessionOrderId) ?? 0;
+        }
+
+        private void SetOrderSession(int orderId)
+        {
+            HttpContext.Session.SetInt32(SessionOrderId, orderId);
+        }
+
+        private void ClearOrderSession()
+        {
+            HttpContext.Session.Remove(SessionOrderId);
         }
     }
 }

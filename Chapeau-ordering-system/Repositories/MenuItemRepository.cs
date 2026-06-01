@@ -14,11 +14,10 @@ namespace Chapeau_ordering_system.Repositories
             _connectionString = configuration.GetConnectionString("ChapeauDatabase")!;
         }
 
-        // Get all menu items from the database
         public List<MenuItem> GetAll()
         {
             List<MenuItem> menuItems = new List<MenuItem>();
-            string query = "SELECT MenuItemId, Name, Price, Type, Course, Stock FROM MenuItems ORDER BY Course, Name";
+            string query = "SELECT MenuItemId, Name, Price, Type, Course, Card, VatRate, Stock FROM dbo.MenuItems ORDER BY Course, Name";
 
             try
             {
@@ -41,19 +40,20 @@ namespace Chapeau_ordering_system.Repositories
             return menuItems;
         }
 
-        // Get menu items filtered by type and/or course — filtering is done in SQL with WHERE clause
-        public List<MenuItem> GetFiltered(MenuItemType? type, CourseType? course)
+        public List<MenuItem> GetFiltered(MenuItemType? type, CourseType? course, CardType? card)
         {
             List<MenuItem> menuItems = new List<MenuItem>();
 
-            // Build query dynamically based on which filters are active
-            string query = "SELECT MenuItemId, Name, Price, Type, Course, Stock FROM MenuItems WHERE 1=1";
+            string query = "SELECT MenuItemId, Name, Price, Type, Course, Card, VatRate, Stock FROM dbo.MenuItems WHERE 1=1";
 
             if (type.HasValue)
                 query += " AND Type = @Type";
 
             if (course.HasValue)
                 query += " AND Course = @Course";
+
+            if (card.HasValue)
+                query += " AND Card = @Card";
 
             query += " ORDER BY Course, Name";
 
@@ -67,6 +67,9 @@ namespace Chapeau_ordering_system.Repositories
 
                     if (course.HasValue)
                         command.Parameters.AddWithValue("@Course", (int)course.Value);
+
+                    if (card.HasValue)
+                        command.Parameters.AddWithValue("@Card", (int)card.Value);
 
                     connection.Open();
                     SqlDataReader reader = command.ExecuteReader();
@@ -84,11 +87,10 @@ namespace Chapeau_ordering_system.Repositories
             return menuItems;
         }
 
-        // Get a single menu item by its id
         public MenuItem? GetById(int menuItemId)
         {
             MenuItem? menuItem = null;
-            string query = "SELECT MenuItemId, Name, Price, Type, Course, Stock FROM MenuItems WHERE MenuItemId = @MenuItemId";
+            string query = "SELECT MenuItemId, Name, Price, Type, Course, Card, VatRate, Stock FROM dbo.MenuItems WHERE MenuItemId = @MenuItemId";
 
             try
             {
@@ -112,7 +114,53 @@ namespace Chapeau_ordering_system.Repositories
             return menuItem;
         }
 
-        // Helper method to map a database row to a MenuItem object — avoids duplicate code
+        public void DecreaseStock(int menuItemId, int quantity)
+        {
+            string query = @"UPDATE dbo.MenuItems
+                             SET    Stock = Stock - @Quantity
+                             WHERE  MenuItemId  = @MenuItemId
+                             AND    Stock      >= @Quantity";
+
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                using (SqlCommand command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@MenuItemId", menuItemId);
+                    command.Parameters.AddWithValue("@Quantity", quantity);
+                    connection.Open();
+                    command.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error decreasing stock: " + ex.Message);
+            }
+        }
+
+        public void IncreaseStock(int menuItemId, int quantity)
+        {
+            string query = @"UPDATE dbo.MenuItems
+                             SET    Stock = Stock + @Quantity
+                             WHERE  MenuItemId = @MenuItemId";
+
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                using (SqlCommand command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@MenuItemId", menuItemId);
+                    command.Parameters.AddWithValue("@Quantity", quantity);
+                    connection.Open();
+                    command.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error increasing stock: " + ex.Message);
+            }
+        }
+
         private MenuItem ReadMenuItem(SqlDataReader reader)
         {
             return new MenuItem
@@ -122,6 +170,8 @@ namespace Chapeau_ordering_system.Repositories
                 Price = (decimal)reader["Price"],
                 Type = (MenuItemType)(int)reader["Type"],
                 Course = (CourseType)(int)reader["Course"],
+                Card = (CardType)(int)reader["Card"],
+                VatRate = (decimal)reader["VatRate"],
                 Stock = (int)reader["Stock"]
             };
         }
