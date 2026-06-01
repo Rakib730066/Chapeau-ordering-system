@@ -42,6 +42,30 @@
         </a>
     </div>
 
+    @* ── Card filter buttons (All / Lunch / Dinner / Drinks) ── *@
+    <div class="mb-3">
+        <span class="fw-semibold me-2">Card:</span>
+
+        <a asp-action="Menu"
+           asp-route-tableId="@Model.TableId"
+           asp-route-course="@((int?)Model.ActiveCourse)"
+           asp-route-card="@((int?)Model.ActiveCard)"
+           class="btn btn-sm @(Model.ActiveCard == null ? "btn-dark" : "btn-outline-dark") me-1">
+            All
+        </a>
+
+        @foreach (CardType cardType in Enum.GetValues<CardType>())
+        {
+            <a asp-action="Menu"
+               asp-route-tableId="@Model.TableId"
+               asp-route-card="@((int)cardType)"
+               asp-route-course="@((int?)Model.ActiveCourse)"
+               class="btn btn-sm @(Model.ActiveCard == cardType ? "btn-dark" : "btn-outline-dark") me-1">
+                @cardType
+            </a>
+        }
+    </div>
+
     @* ── Course filter buttons (only shown for food) ── *@
     @if (Model.ActiveType == null || Model.ActiveType == MenuItemType.Food)
     {
