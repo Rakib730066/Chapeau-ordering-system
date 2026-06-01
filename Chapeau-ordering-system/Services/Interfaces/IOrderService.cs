@@ -24,5 +24,9 @@ namespace Chapeau_ordering_system.Services.Interfaces
 
         List<OrderItem> GetItemsByOrderId(int orderId);
 
+        Order? GetOrderById(int orderId);
+
+        Order?GetOrderByTableId(int tableId);
+
     }
 }
