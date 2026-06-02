@@ -69,7 +69,6 @@ namespace Chapeau_ordering_system.Repositories
         // CRUD OPERATIONS
         // ============================================
 
-        // Get all orders from database
         public List<Order> GetAll()
         {
             List<Order> orders = new List<Order>();
@@ -175,9 +174,9 @@ namespace Chapeau_ordering_system.Repositories
             try
             {
                 using (SqlConnection connection = new SqlConnection(_connectionString))
-                using (SqlCommand command = new SqlCommand(
-                    "DELETE FROM Orders WHERE OrderId = @OrderId",
+                using (SqlCommand command = new SqlCommand("DELETE FROM Orders WHERE OrderId = @OrderId",
                     connection))
+                    
                 {
                     command.Parameters.AddWithValue("@OrderId", orderId);
                     connection.Open();
@@ -248,10 +247,64 @@ namespace Chapeau_ordering_system.Repositories
             return orders.Values.ToList();
         }
 
+        // Get finished orders today (filtered by Bar or Kitchen using MenuItemType)
+        public List<Order> GetFinishedOrdersToday(MenuItemType menuItemType)
+        {
+            // Validate MenuItemType parameter
+            if (menuItemType != MenuItemType.Food && menuItemType != MenuItemType.Drink)
+                throw new ArgumentException($"Invalid menu item type: {menuItemType}");
 
+            Dictionary<int, Order> orders = new Dictionary<int, Order>();
+            try
+            {
+                string query = @"
+                    SELECT 
+                        o.OrderId, o.TableId, t.TableNumber, o.EmployeeId,
+                        e.FirstName, e.LastName, e.Role, o.OrderTime, o.Status,
+                        oi.OrderItemId, oi.MenuItemId, oi.Quantity, oi.Comment,
+                        oi.Status AS OrderItemStatus, oi.OrderTime AS OrderItemTime,
+                        mi.Name AS MenuItemName, mi.Price, mi.Type, mi.Course
+                    FROM Orders o
+                    INNER JOIN OrderItems oi ON o.OrderId = oi.OrderId
+                    INNER JOIN MenuItems mi ON oi.MenuItemId = mi.MenuItemId
+                    INNER JOIN Tables t ON o.TableId = t.TableId
+                    INNER JOIN Employees e ON o.EmployeeId = e.EmployeeId
+                    WHERE mi.Type = @MenuItemType
+                    AND oi.Status = 3
+                    AND CAST(o.OrderTime AS DATE) = CAST(GETDATE() AS DATE)
+                    ORDER BY o.OrderTime ASC";
 
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                using (SqlCommand command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@MenuItemType", (int)menuItemType);
+                    connection.Open();
+                    using (SqlDataReader reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            int orderId = (int)reader["OrderId"];
+                            if (!orders.ContainsKey(orderId))
+                            {
+                                Order order = MapOrder(reader);
+                                order.Table = MapRestaurantTable(reader);
+                                order.Employee = MapEmployee(reader);
+                                order.OrderItems = new List<OrderItem>();
+                                orders[orderId] = order;
+                            }
 
-        
+                            OrderItem orderItem = MapOrderItem(reader);
+                            orders[orderId].OrderItems.Add(orderItem);
+                        }
+                    }
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Error fetching finished orders today.", ex);
+            }
+            return orders.Values.ToList();
+        }
 
         // Update order status
         public void UpdateStatus(int orderId, string status)
@@ -334,6 +387,31 @@ namespace Chapeau_ordering_system.Repositories
             catch (SqlException ex)
             {
                 throw new Exception("Error updating order item status.", ex);
+            }
+        }
+
+        // Update all items in a course (Kitchen only, Food items)
+        public void UpdateCourseStatus(int orderId, CourseType courseType, OrderItemStatus oldStatus, OrderItemStatus newStatus)
+        {
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                using (SqlCommand command = new SqlCommand(
+                    "UPDATE OrderItems SET Status = @NewStatus WHERE OrderId = @OrderId AND Status = @OldStatus AND MenuItemId IN (SELECT MenuItemId FROM MenuItems WHERE Type = 1 AND Course = @Course)",
+                    connection))
+                {
+                    command.Parameters.AddWithValue("@NewStatus", (int)newStatus);
+                    command.Parameters.AddWithValue("@OldStatus", (int)oldStatus);
+                    command.Parameters.AddWithValue("@Course", (int)courseType);
+                    command.Parameters.AddWithValue("@OrderId", orderId);
+
+                    connection.Open();
+                    command.ExecuteNonQuery();
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Error updating course status.", ex);
             }
         }
     }

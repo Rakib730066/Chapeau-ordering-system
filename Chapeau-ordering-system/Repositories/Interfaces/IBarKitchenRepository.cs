@@ -14,6 +14,9 @@ namespace Chapeau_ordering_system.Repositories.Interfaces
         // Get running orders for Bar or Kitchen (filtered by MenuItemType)
         List<Order> GetRunningOrders(MenuItemType menuItemType);
 
+        // Get finished orders today for Bar or Kitchen (filtered by MenuItemType)
+        List<Order> GetFinishedOrdersToday(MenuItemType menuItemType);
+
         // Add new order
         void Add(Order order);
 
@@ -37,6 +40,13 @@ namespace Chapeau_ordering_system.Repositories.Interfaces
         void UpdateOrderItemStatus(
             int orderItemId,
             MenuItemType menuItemType,
+            OrderItemStatus oldStatus,
+            OrderItemStatus newStatus);
+
+        // Update all items in a course (Kitchen only, Food items)
+        void UpdateCourseStatus(
+            int orderId,
+            CourseType courseType,
             OrderItemStatus oldStatus,
             OrderItemStatus newStatus);
     }

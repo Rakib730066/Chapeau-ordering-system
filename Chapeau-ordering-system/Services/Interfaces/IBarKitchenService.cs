@@ -9,6 +9,12 @@ namespace Chapeau_ordering_system.Services.Interfaces
         // Get ViewModel based on logged-in employee role (Kitchen or Bar)
         BarKitchenViewModel GetBarKitchenViewModel();
 
+        // Get running orders view
+        BarKitchenViewModel GetRunningOrdersViewModel();
+
+        // Get finished orders today view
+        BarKitchenViewModel GetFinishedOrdersTodayViewModel();
+
         // Mark order item as being prepared (service determines role internally)
         void MarkItemBeingPrepared(int orderItemId);
 
@@ -20,5 +26,11 @@ namespace Chapeau_ordering_system.Services.Interfaces
 
         // Mark all items in an order as ready to be served (service determines role internally)
         void MarkOrderReadyToServe(int orderId);
+
+        // Mark all items in a course as being prepared (Kitchen only)
+        void MarkCourseBeingPrepared(int orderId, CourseType courseType);
+
+        // Mark all items in a course as ready to be served (Kitchen only)
+        void MarkCourseReadyToServe(int orderId, CourseType courseType);
     }
 }

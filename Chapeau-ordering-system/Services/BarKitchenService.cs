@@ -43,7 +43,41 @@ namespace Chapeau_ordering_system.Services
             viewModel.MenuItemType = menuItemType;
             viewModel.PageTitle = menuItemType == MenuItemType.Food ? "Kitchen Orders" : "Bar Orders";
             viewModel.ReturnPage = menuItemType == MenuItemType.Food ? "Kitchen" : "Bar";
+            viewModel.ViewMode = "running";
+            viewModel.IsFinishedView = false;
             viewModel.Orders = _orderRepository.GetRunningOrders(menuItemType);
+
+            return viewModel;
+        }
+
+        // Get running orders view
+        public BarKitchenViewModel GetRunningOrdersViewModel()
+        {
+            MenuItemType menuItemType = GetMenuItemTypeForCurrentEmployee();
+
+            BarKitchenViewModel viewModel = new BarKitchenViewModel();
+            viewModel.MenuItemType = menuItemType;
+            viewModel.PageTitle = menuItemType == MenuItemType.Food ? "Kitchen Orders" : "Bar Orders";
+            viewModel.ReturnPage = menuItemType == MenuItemType.Food ? "Kitchen" : "Bar";
+            viewModel.ViewMode = "running";
+            viewModel.IsFinishedView = false;
+            viewModel.Orders = _orderRepository.GetRunningOrders(menuItemType);
+
+            return viewModel;
+        }
+
+        // Get finished orders today view
+        public BarKitchenViewModel GetFinishedOrdersTodayViewModel()
+        {
+            MenuItemType menuItemType = GetMenuItemTypeForCurrentEmployee();
+
+            BarKitchenViewModel viewModel = new BarKitchenViewModel();
+            viewModel.MenuItemType = menuItemType;
+            viewModel.PageTitle = menuItemType == MenuItemType.Food ? "Kitchen Orders - Finished Today" : "Bar Orders - Finished Today";
+            viewModel.ReturnPage = menuItemType == MenuItemType.Food ? "Kitchen" : "Bar";
+            viewModel.ViewMode = "finished";
+            viewModel.IsFinishedView = true;
+            viewModel.Orders = _orderRepository.GetFinishedOrdersToday(menuItemType);
 
             return viewModel;
         }
@@ -94,6 +128,38 @@ namespace Chapeau_ordering_system.Services
                 menuItemType,
                 OrderItemStatus.BeingPrepared,
                 OrderItemStatus.ReadyToBeServed);
+        }
+
+        // Mark all items in a course as being prepared (Kitchen only)
+        public void MarkCourseBeingPrepared(int orderId, CourseType courseType)
+        {
+            MenuItemType menuItemType = GetMenuItemTypeForCurrentEmployee();
+            
+            // Only allow Kitchen to update courses
+            if (menuItemType == MenuItemType.Food)
+            {
+                _orderRepository.UpdateCourseStatus(
+                    orderId,
+                    courseType,
+                    OrderItemStatus.Ordered,
+                    OrderItemStatus.BeingPrepared);
+            }
+        }
+
+        // Mark all items in a course as ready to be served (Kitchen only)
+        public void MarkCourseReadyToServe(int orderId, CourseType courseType)
+        {
+            MenuItemType menuItemType = GetMenuItemTypeForCurrentEmployee();
+            
+            // Only allow Kitchen to update courses
+            if (menuItemType == MenuItemType.Food)
+            {
+                _orderRepository.UpdateCourseStatus(
+                    orderId,
+                    courseType,
+                    OrderItemStatus.BeingPrepared,
+                    OrderItemStatus.ReadyToBeServed);
+            }
         }
     }
 }

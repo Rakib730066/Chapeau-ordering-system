@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Chapeau_ordering_system.Services.Interfaces;
 using Chapeau_ordering_system.ViewModels;
+using Chapeau_ordering_system.Models.Enums;
 
 namespace Chapeau_ordering_system.Controllers
 {
@@ -19,11 +20,20 @@ namespace Chapeau_ordering_system.Controllers
             return HttpContext.Session.GetString("EmployeeRole") != null;
         }
 
-        public IActionResult Index()
+        public IActionResult Index(string viewMode = "running")
         {
             if (!IsEmployeeLoggedIn())
                 return RedirectToAction("Login", "Account");
-            var viewModel = _barKitchenService.GetBarKitchenViewModel();
+            
+            BarKitchenViewModel viewModel;
+            if (viewMode == "finished")
+            {
+                viewModel = _barKitchenService.GetFinishedOrdersTodayViewModel();
+            }
+            else
+            {
+                viewModel = _barKitchenService.GetRunningOrdersViewModel();
+            }
             return View(viewModel);
         }
 
@@ -34,7 +44,7 @@ namespace Chapeau_ordering_system.Controllers
             if (!IsEmployeeLoggedIn())
                 return RedirectToAction("Login", "Account");
             _barKitchenService.MarkItemBeingPrepared(orderItemId);
-            return RedirectToAction("Index");
+            return RedirectToAction("Index", new { viewMode = "running" });
         }
 
         
@@ -45,7 +55,7 @@ namespace Chapeau_ordering_system.Controllers
                 return RedirectToAction("Login", "Account");
 
             _barKitchenService.MarkItemReady(orderItemId);
-            return RedirectToAction("Index");
+            return RedirectToAction("Index", new { viewMode = "running" });
         }
 
         [HttpPost]
@@ -54,7 +64,7 @@ namespace Chapeau_ordering_system.Controllers
             if (!IsEmployeeLoggedIn())
                 return RedirectToAction("Login", "Account");
             _barKitchenService.MarkOrderBeingPrepared(orderId);
-            return RedirectToAction("Index");
+            return RedirectToAction("Index", new { viewMode = "running" });
         }
 
         // POST: Mark ALL items in order as ready to be served
@@ -65,7 +75,35 @@ namespace Chapeau_ordering_system.Controllers
                 return RedirectToAction("Login", "Account");
 
             _barKitchenService.MarkOrderReadyToServe(orderId);
-            return RedirectToAction("Index");
+            return RedirectToAction("Index", new { viewMode = "running" });
+        }
+
+        // POST: Mark all items in a course as being prepared (Kitchen only)
+        [HttpPost]
+        public IActionResult StartCourse(int orderId, int courseType)
+        {
+            if (!IsEmployeeLoggedIn())
+                return RedirectToAction("Login", "Account");
+
+            if (Enum.TryParse<CourseType>(courseType.ToString(), out var course))
+            {
+                _barKitchenService.MarkCourseBeingPrepared(orderId, course);
+            }
+            return RedirectToAction("Index", new { viewMode = "running" });
+        }
+
+        // POST: Mark all items in a course as ready to be served (Kitchen only)
+        [HttpPost]
+        public IActionResult MarkCourseReady(int orderId, int courseType)
+        {
+            if (!IsEmployeeLoggedIn())
+                return RedirectToAction("Login", "Account");
+
+            if (Enum.TryParse<CourseType>(courseType.ToString(), out var course))
+            {
+                _barKitchenService.MarkCourseReadyToServe(orderId, course);
+            }
+            return RedirectToAction("Index", new { viewMode = "running" });
         }
     }
 }
