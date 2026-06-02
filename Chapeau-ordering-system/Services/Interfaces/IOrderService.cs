@@ -5,6 +5,7 @@ namespace Chapeau_ordering_system.Services.Interfaces
     public interface IOrderService
     {
         IEnumerable<Order> GetOpenOrders();
+        bool TableHasUnservedItems(int tableId);
         void MarkItemServed(int orderItemId);
     }
 }

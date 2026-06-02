@@ -43,16 +43,10 @@ namespace Chapeau_ordering_system.Controllers
 
             TableStatus status = (TableStatus)newStatus;
 
-            if (status == TableStatus.Free)
+            if (status == TableStatus.Free && _orderService.TableHasUnservedItems(tableId))
             {
-                var openOrders = _orderService.GetOpenOrders()
-                    .Where(o => o.Table != null && o.Table.TableId == tableId);
-
-                if (openOrders.Any())
-                {
-                    TempData["Error"] = "Cannot mark table as free — it still has open orders.";
-                    return RedirectToAction("Index");
-                }
+                TempData["Error"] = "Cannot mark table as free — it still has open orders.";
+                return RedirectToAction("Index");
             }
 
             _tableService.UpdateStatus(tableId, status);
