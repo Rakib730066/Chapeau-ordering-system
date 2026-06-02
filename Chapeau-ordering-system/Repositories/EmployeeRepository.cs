@@ -19,12 +19,19 @@ namespace Chapeau_ordering_system.Repositories
         {
             bool isNumeric = int.TryParse(username, out int employeeId);
             string whereClause = isNumeric ? "EmployeeId = @param" : "Username = @param";
-            using var conn = new SqlConnection(_connectionString);
-            using var cmd = new SqlCommand($"SELECT {SelectColumns} FROM dbo.Employees WHERE {whereClause} AND IsActive = 1", conn);
-            cmd.Parameters.AddWithValue("@param", isNumeric ? (object)employeeId : username);
-            conn.Open();
-            using var reader = cmd.ExecuteReader();
-            return reader.Read() ? MapEmployeeFromReader(reader) : null;
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                using var cmd = new SqlCommand($"SELECT {SelectColumns} FROM dbo.Employees WHERE {whereClause} AND IsActive = 1", conn);
+                cmd.Parameters.AddWithValue("@param", isNumeric ? (object)employeeId : username);
+                conn.Open();
+                using var reader = cmd.ExecuteReader();
+                return reader.Read() ? MapEmployeeFromReader(reader) : null;
+            }
+            catch (SqlException)
+            {
+                return null;
+            }
         }
 
         private static Employee MapEmployeeFromReader(SqlDataReader reader)

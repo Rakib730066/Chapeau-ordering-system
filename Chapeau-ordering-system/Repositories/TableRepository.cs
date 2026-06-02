@@ -18,23 +18,37 @@ namespace Chapeau_ordering_system.Repositories
         public IEnumerable<RestaurantTable> GetAllTables()
         {
             var tables = new List<RestaurantTable>();
-            using var conn = new SqlConnection(_connectionString);
-            using var cmd = new SqlCommand($"SELECT {SelectColumns} FROM dbo.Tables WHERE IsActive = 1 ORDER BY TableId", conn);
-            conn.Open();
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
-                tables.Add(MapTableFromReader(reader));
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                using var cmd = new SqlCommand($"SELECT {SelectColumns} FROM dbo.Tables WHERE IsActive = 1 ORDER BY TableId", conn);
+                conn.Open();
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                    tables.Add(MapTableFromReader(reader));
+            }
+            catch (SqlException)
+            {
+                return tables;
+            }
             return tables;
         }
 
         public RestaurantTable? GetById(int id)
         {
-            using var conn = new SqlConnection(_connectionString);
-            using var cmd = new SqlCommand($"SELECT {SelectColumns} FROM dbo.Tables WHERE TableId = @id", conn);
-            cmd.Parameters.AddWithValue("@id", id);
-            conn.Open();
-            using var reader = cmd.ExecuteReader();
-            return reader.Read() ? MapTableFromReader(reader) : null;
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                using var cmd = new SqlCommand($"SELECT {SelectColumns} FROM dbo.Tables WHERE TableId = @id", conn);
+                cmd.Parameters.AddWithValue("@id", id);
+                conn.Open();
+                using var reader = cmd.ExecuteReader();
+                return reader.Read() ? MapTableFromReader(reader) : null;
+            }
+            catch (SqlException)
+            {
+                return null;
+            }
         }
 
         public void UpdateStatus(int id, TableStatus status, int? currentOrderId = null)
@@ -48,13 +62,20 @@ namespace Chapeau_ordering_system.Repositories
                                            ELSE NULL
                                        END
                                    WHERE TableId = @id";
-            using var conn = new SqlConnection(_connectionString);
-            using var cmd = new SqlCommand(query, conn);
-            cmd.Parameters.AddWithValue("@status", (int)status);
-            cmd.Parameters.AddWithValue("@orderId", (object?)currentOrderId ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@id", id);
-            conn.Open();
-            cmd.ExecuteNonQuery();
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                using var cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@status", (int)status);
+                cmd.Parameters.AddWithValue("@orderId", (object?)currentOrderId ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@id", id);
+                conn.Open();
+                cmd.ExecuteNonQuery();
+            }
+            catch (SqlException)
+            {
+                // status update failed — table display remains unchanged
+            }
         }
 
         private static RestaurantTable MapTableFromReader(SqlDataReader reader)
