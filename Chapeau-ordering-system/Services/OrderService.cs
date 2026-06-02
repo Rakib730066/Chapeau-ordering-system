@@ -19,6 +19,13 @@ namespace Chapeau_ordering_system.Services
             return _orderRepository.GetOpenOrders();
         }
 
+        public bool TableHasUnservedItems(int tableId)
+        {
+            return GetOpenOrders()
+                .Where(o => o.Table?.TableId == tableId)
+                .Any(o => o.HasUnservedItems);
+        }
+
         public void MarkItemServed(int orderItemId)
         {
             _orderRepository.UpdateOrderItemStatus(orderItemId, OrderItemStatus.Served);

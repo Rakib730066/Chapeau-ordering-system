@@ -10,5 +10,9 @@ namespace Chapeau_ordering_system.Models
         public DateTime OrderTime { get; set; }
         public OrderStatus Status { get; set; }
         public List<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+
+        public bool HasUnservedItems =>
+            OrderItems.Any(i => i.Status != OrderItemStatus.Served
+                             && i.Status != OrderItemStatus.Cancelled);
     }
 }
