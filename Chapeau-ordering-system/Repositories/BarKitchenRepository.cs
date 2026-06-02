@@ -270,8 +270,7 @@ namespace Chapeau_ordering_system.Repositories
                     INNER JOIN Tables t ON o.TableId = t.TableId
                     INNER JOIN Employees e ON o.EmployeeId = e.EmployeeId
                     WHERE mi.Type = @MenuItemType
-                    AND oi.Status = 3
-                    AND CAST(o.OrderTime AS DATE) = CAST(GETDATE() AS DATE)
+                    AND oi.Status IN (3, 4)
                     ORDER BY o.OrderTime ASC";
 
                 using (SqlConnection connection = new SqlConnection(_connectionString))
@@ -412,6 +411,30 @@ namespace Chapeau_ordering_system.Repositories
             catch (SqlException ex)
             {
                 throw new Exception("Error updating course status.", ex);
+            }
+        }
+
+        // Mark all items in order as ready to be served (regardless of current status)
+        public void UpdateAllOrderItemsToReady(int orderId, MenuItemType menuItemType)
+        {
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                using (SqlCommand command = new SqlCommand(
+                    "UPDATE OrderItems SET Status = @ReadyStatus WHERE OrderId = @OrderId AND Status IN (1, 2) AND MenuItemId IN (SELECT MenuItemId FROM MenuItems WHERE Type = @MenuItemType)",
+                    connection))
+                {
+                    command.Parameters.AddWithValue("@ReadyStatus", (int)OrderItemStatus.ReadyToBeServed);
+                    command.Parameters.AddWithValue("@MenuItemType", (int)menuItemType);
+                    command.Parameters.AddWithValue("@OrderId", orderId);
+
+                    connection.Open();
+                    command.ExecuteNonQuery();
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception("Error marking all order items as ready.", ex);
             }
         }
     }

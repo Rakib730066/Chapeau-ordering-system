@@ -123,11 +123,7 @@ namespace Chapeau_ordering_system.Services
         {
             MenuItemType menuItemType = GetMenuItemTypeForCurrentEmployee();
 
-            _orderRepository.UpdateOrderItemsStatusForOrder(
-                orderId,
-                menuItemType,
-                OrderItemStatus.BeingPrepared,
-                OrderItemStatus.ReadyToBeServed);
+            _orderRepository.UpdateAllOrderItemsToReady(orderId, menuItemType);
         }
 
         // Mark all items in a course as being prepared (Kitchen only)

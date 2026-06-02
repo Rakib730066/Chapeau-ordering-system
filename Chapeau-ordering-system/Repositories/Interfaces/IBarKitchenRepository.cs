@@ -49,5 +49,8 @@ namespace Chapeau_ordering_system.Repositories.Interfaces
             CourseType courseType,
             OrderItemStatus oldStatus,
             OrderItemStatus newStatus);
+
+        // Mark all items in order as ready to be served (regardless of current status)
+        void UpdateAllOrderItemsToReady(int orderId, MenuItemType menuItemType);
     }
 }

@@ -9,7 +9,7 @@
     }
 }
 
-<div class="border rounded p-2 mb-2">
+<div class="border rounded p-2 mb-2 @(isFinishedView ? "border-success bg-light" : "")">
     <p class="mb-1">
         <strong>@Model.Quantity x @(Model.MenuItem?.Name ?? "Unknown Item")</strong>
     </p>
@@ -22,10 +22,41 @@
     }
 
     <p class="mb-1">
-        <strong>Status:</strong> @Model.Status
+        <strong>Status:</strong>
+
+        @if (isFinishedView)
+        {
+            <span class="badge bg-success">
+                @Model.Status
+            </span>
+        }
+        else if (Model.Status == OrderItemStatus.Ordered)
+        {
+            <span class="badge bg-warning text-dark">
+                @Model.Status
+            </span>
+        }
+        else if (Model.Status == OrderItemStatus.BeingPrepared)
+        {
+            <span class="badge bg-info text-dark">
+                @Model.Status
+            </span>
+        }
+        else
+        {
+            <span class="badge bg-secondary">
+                @Model.Status
+            </span>
+        }
     </p>
 
-    <!-- Show the correct button based on the item status (only in running view) -->
+    @if (isFinishedView)
+    {
+        <p class="mb-0 text-success">
+            <strong>Ready for waiter to serve</strong>
+        </p>
+    }
+
     @if (!isFinishedView)
     {
         @if (Model.Status == OrderItemStatus.Ordered)

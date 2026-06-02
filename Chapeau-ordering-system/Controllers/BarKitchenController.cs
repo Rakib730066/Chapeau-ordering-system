@@ -75,7 +75,7 @@ namespace Chapeau_ordering_system.Controllers
                 return RedirectToAction("Login", "Account");
 
             _barKitchenService.MarkOrderReadyToServe(orderId);
-            return RedirectToAction("Index", new { viewMode = "running" });
+            return RedirectToAction("Index", new { viewMode = "finished" });
         }
 
         // POST: Mark all items in a course as being prepared (Kitchen only)
