@@ -9,30 +9,38 @@
 @functions {
     static string BadgeClass(TableStatus status) => status switch
     {
-        TableStatus.Free     => "bg-success",
+        TableStatus.Free => "bg-success",
         TableStatus.Occupied => "bg-danger",
         TableStatus.Reserved => "bg-warning text-dark",
-        _                    => "bg-secondary"
+        _ => "bg-secondary"
     };
 
     static string BorderClass(TableStatus status) => status switch
     {
-        TableStatus.Free     => "border-success",
+        TableStatus.Free => "border-success",
         TableStatus.Occupied => "border-danger",
-        _                    => "border-secondary"
+        _ => "border-secondary"
     };
 
     static string ItemBadgeClass(OrderItemStatus status) => status switch
     {
-        OrderItemStatus.Ordered         => "bg-primary",
-        OrderItemStatus.BeingPrepared   => "bg-warning text-dark",
+        OrderItemStatus.Ordered => "bg-primary",
+        OrderItemStatus.BeingPrepared => "bg-warning text-dark",
         OrderItemStatus.ReadyToBeServed => "bg-success",
-        OrderItemStatus.Served          => "bg-secondary",
-        _                               => "bg-secondary"
+        OrderItemStatus.Served => "bg-secondary",
+        _ => "bg-secondary"
     };
 }
 
 <div class="container mt-4">
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Restaurant Overview</h2>
         <span>
@@ -64,6 +72,25 @@
                     {
                         <div class="small text-muted">Since: @t.OccupiedSince.Value.ToShortTimeString()</div>
                     }
+                    <div class="mt-2">
+                        @if (t.Status == TableStatus.Free)
+                        {
+                            <form method="post" asp-action="ChangeStatus" asp-controller="RestaurantOverview">
+                                <input type="hidden" name="tableId" value="@t.TableId" />
+                                <input type="hidden" name="newStatus" value="1" />
+                                <button type="submit" class="btn btn-sm btn-danger w-100">Mark as Occupied</button>
+                            </form>
+                        }
+                        else if (t.Status == TableStatus.Occupied)
+                        {
+                            <form method="post" asp-action="ChangeStatus" asp-controller="RestaurantOverview">
+                                <input type="hidden" name="tableId" value="@t.TableId" />
+                                <input type="hidden" name="newStatus" value="0" />
+                                <button type="submit" class="btn btn-sm btn-success w-100">Mark as Free</button>
+                            </form>
+                        }
+                    </div>
+
 
                     @if (orders.Any())
                     {
@@ -72,10 +99,20 @@
                         {
                             @foreach (var item in order.OrderItems)
                             {
-                                <div class="d-flex justify-content-between align-items-center py-1">
-                                    <span class="small">@item.Quantity&times; @item.MenuItem?.Name</span>
-                                    <span class="badge @ItemBadgeClass(item.Status) ms-2">@item.Status</span>
-                                </div>
+                              <div class="d-flex justify-content-between align-items-center py-1">
+    <span class="small">@item.Quantity&times; @item.MenuItem?.Name</span>
+    <div class="d-flex align-items-center gap-1">
+        <span class="badge @ItemBadgeClass(item.Status)">@item.Status</span>
+        @if (item.Status == OrderItemStatus.ReadyToBeServed)
+        {
+            <form method="post" asp-action="MarkServed" asp-controller="RestaurantOverview">
+                <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
+                <button type="submit" class="btn btn-sm btn-outline-success py-0 px-1" style="font-size:0.7rem;">Serve</button>
+            </form>
+        }
+    </div>
+</div>
+
                             }
                         }
                     }

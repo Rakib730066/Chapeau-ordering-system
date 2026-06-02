@@ -1,4 +1,5 @@
 using Chapeau_ordering_system.Models;
+using Chapeau_ordering_system.Models.Enums;
 using Chapeau_ordering_system.Repositories.Interfaces;
 using Chapeau_ordering_system.Services.Interfaces;
 
@@ -16,6 +17,11 @@ namespace Chapeau_ordering_system.Services
         public IEnumerable<Order> GetOpenOrders()
         {
             return _orderRepository.GetOpenOrders();
+        }
+
+        public void MarkItemServed(int orderItemId)
+        {
+            _orderRepository.UpdateOrderItemStatus(orderItemId, OrderItemStatus.Served);
         }
     }
 }
