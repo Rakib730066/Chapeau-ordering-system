@@ -551,6 +551,39 @@ namespace Chapeau_ordering_system.Repositories
             cmd.ExecuteNonQuery();
         }
 
+        public void UpdateOrderItemStatus(int orderItemId, OrderItemStatus status)
+        {
+            const string query = "UPDATE dbo.OrderItems SET Status = @Status WHERE OrderItemId = @OrderItemId";
+
+            using var conn = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(query, conn);
+
+            cmd.Parameters.AddWithValue("@OrderItemId", orderItemId);
+            cmd.Parameters.AddWithValue("@Status", (int)status);
+
+            conn.Open();
+            cmd.ExecuteNonQuery();
+        }
+
+        public bool TableHasUnservedItems(int tableId)
+        {
+            const string query = @"
+                SELECT COUNT(*)
+                FROM dbo.OrderItems oi
+                INNER JOIN dbo.Orders o ON o.OrderId = oi.OrderId
+                WHERE o.TableId = @TableId
+                  AND o.Status  = 1
+                  AND oi.Status NOT IN (4, 5)";
+
+            using var conn = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(query, conn);
+
+            cmd.Parameters.AddWithValue("@TableId", tableId);
+
+            conn.Open();
+            return (int)cmd.ExecuteScalar() > 0;
+        }
+
         private static OrderItem MapOrderItemWithMenuItem(SqlDataReader reader)
         {
             return new OrderItem

@@ -26,7 +26,10 @@ namespace Chapeau_ordering_system.Services.Interfaces
 
         Order? GetOrderById(int orderId);
 
-        Order?GetOrderByTableId(int tableId);
+        Order? GetOrderByTableId(int tableId);
 
+        bool TableHasUnservedItems(int tableId);
+
+        void MarkItemServed(int orderItemId);
     }
 }
