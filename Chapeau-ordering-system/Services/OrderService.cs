@@ -223,9 +223,19 @@ namespace Chapeau_ordering_system.Services
                 throw new InvalidOperationException("Invalid table.");
 
             Order? order = _orderRepository.GetOpenOrders()
-                .FirstOrDefault(o => o.Table?.TableId == tableId);         
+                .FirstOrDefault(o => o.Table?.TableId == tableId);
 
             return order;
+        }
+
+        public bool TableHasUnservedItems(int tableId)
+        {
+            return _orderRepository.TableHasUnservedItems(tableId);
+        }
+
+        public void MarkItemServed(int orderItemId)
+        {
+            _orderRepository.UpdateOrderItemStatus(orderItemId, OrderItemStatus.Served);
         }
     }
 }

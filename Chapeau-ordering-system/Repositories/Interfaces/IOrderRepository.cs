@@ -27,6 +27,10 @@ namespace Chapeau_ordering_system.Repositories.Interfaces
         void UpdateOrderStatus(int orderId, OrderStatus status);
         void CancelOrder(int orderId);
 
+        // ORDER ITEM STATUS
+        void UpdateOrderItemStatus(int orderItemId, OrderItemStatus status);
+        bool TableHasUnservedItems(int tableId);
+
         // STOCK
         void DecreaseStock(int menuItemId, int quantity);
         void IncreaseStock(int menuItemId, int quantity);
