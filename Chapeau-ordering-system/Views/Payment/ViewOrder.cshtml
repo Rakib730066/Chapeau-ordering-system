@@ -41,6 +41,9 @@
         <a asp-action="FinishOrder" asp-route-tableId="@Model.TableId" class="btn btn-success">
             Finish payment
         </a>
+        <a asp-action="SplitOrder" asp-route-tableId="@Model.TableId" class="btn btn-warning">
+            Split bill
+        </a>
         <a asp-controller="RestaurantOverview" asp-action="Index" class="btn btn-secondary">
             Back
         </a>

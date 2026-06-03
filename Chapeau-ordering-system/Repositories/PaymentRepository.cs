@@ -39,12 +39,13 @@ namespace Chapeau_ordering_system.Repositories
                 JOIN dbo.Tables t      ON t.TableId = o.TableId
                 JOIN dbo.MenuItems mi  ON mi.MenuItemId = oi.MenuItemId
                 WHERE o.TableId = @TableId
-                  AND o.Status = @OpenStatus
+                AND o.Status IN (@OpenStatus, @SubmittedStatus)
                 ORDER BY o.OrderId, mi.Name";
 
             SqlCommand cmd = new SqlCommand(query, conn);
             cmd.Parameters.Add("@TableId", System.Data.SqlDbType.Int).Value = tableId;
             cmd.Parameters.Add("@OpenStatus", System.Data.SqlDbType.Int).Value = (int)OrderStatus.Open;
+            cmd.Parameters.Add("@SubmittedStatus", System.Data.SqlDbType.Int).Value = (int)OrderStatus.Submitted;
 
             conn.Open();
             using SqlDataReader reader = cmd.ExecuteReader();
@@ -99,8 +100,7 @@ namespace Chapeau_ordering_system.Repositories
             return order;
         }
 
-        // Inserts the payment, marks order as Paid, and marks table as Free.
-        // All three happen inside a transaction so the database stays consistent.
+        // Single payment: insert payment + mark order Paid + free table, in one transaction.
         public void FinishOrder(Payment payment)
         {
             using SqlConnection conn = new SqlConnection(_connectionString);
@@ -110,7 +110,6 @@ namespace Chapeau_ordering_system.Repositories
 
             try
             {
-                // 1. Insert the payment row
                 string insertPayment = @"
                     INSERT INTO dbo.Payments
                         (OrderId, Amount, TipAmount, VatLowAmount, VatHighAmount,
@@ -131,29 +130,88 @@ namespace Chapeau_ordering_system.Repositories
                 cmd1.Parameters.Add("@PaidAt", System.Data.SqlDbType.DateTime).Value = payment.PaidAt;
                 cmd1.ExecuteNonQuery();
 
-                // 2. Mark the order as Paid
-                string updateOrder = @"
-                    UPDATE dbo.Orders
-                    SET Status = @PaidStatus
-                    WHERE OrderId = @OrderId";
-
-                SqlCommand cmd2 = new SqlCommand(updateOrder, conn, transaction);
+                SqlCommand cmd2 = new SqlCommand(
+                    "UPDATE dbo.Orders SET Status = @PaidStatus WHERE OrderId = @OrderId",
+                    conn, transaction);
                 cmd2.Parameters.Add("@PaidStatus", System.Data.SqlDbType.Int).Value = (int)OrderStatus.Paid;
                 cmd2.Parameters.Add("@OrderId", System.Data.SqlDbType.Int).Value = payment.OrderId;
                 cmd2.ExecuteNonQuery();
 
-                // 3. Mark the table as Free (Status = 0 in TableStatus)
-                string updateTable = @"
+                SqlCommand cmd3 = new SqlCommand(@"
                     UPDATE dbo.Tables
                     SET Status = 0,
                         CurrentOrderId = NULL,
                         OccupiedSince = NULL,
                         LastUpdated = SYSUTCDATETIME()
-                    WHERE TableId = (SELECT TableId FROM dbo.Orders WHERE OrderId = @OrderId)";
-
-                SqlCommand cmd3 = new SqlCommand(updateTable, conn, transaction);
+                    WHERE TableId = (SELECT TableId FROM dbo.Orders WHERE OrderId = @OrderId)",
+                    conn, transaction);
                 cmd3.Parameters.Add("@OrderId", System.Data.SqlDbType.Int).Value = payment.OrderId;
                 cmd3.ExecuteNonQuery();
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+
+        // Multiple payments (split): insert N payments + mark order Paid + free table, in one transaction.
+        public void FinishOrderWithSplit(List<Payment> payments)
+        {
+            if (payments == null || payments.Count == 0)
+                throw new ArgumentException("At least one payment is required.");
+
+            int orderId = payments[0].OrderId;
+
+            using SqlConnection conn = new SqlConnection(_connectionString);
+            conn.Open();
+
+            using SqlTransaction transaction = conn.BeginTransaction();
+
+            try
+            {
+                foreach (Payment payment in payments)
+                {
+                    string insertPayment = @"
+                        INSERT INTO dbo.Payments
+                            (OrderId, Amount, TipAmount, VatLowAmount, VatHighAmount,
+                             PaymentMethod, Feedback, PaidAt)
+                        VALUES
+                            (@OrderId, @Amount, @TipAmount, @VatLow, @VatHigh,
+                             @Method, @Feedback, @PaidAt)";
+
+                    SqlCommand cmd = new SqlCommand(insertPayment, conn, transaction);
+                    cmd.Parameters.Add("@OrderId", System.Data.SqlDbType.Int).Value = payment.OrderId;
+                    cmd.Parameters.Add("@Amount", System.Data.SqlDbType.Decimal).Value = payment.Amount;
+                    cmd.Parameters.Add("@TipAmount", System.Data.SqlDbType.Decimal).Value = payment.TipAmount;
+                    cmd.Parameters.Add("@VatLow", System.Data.SqlDbType.Decimal).Value = payment.VatLowAmount;
+                    cmd.Parameters.Add("@VatHigh", System.Data.SqlDbType.Decimal).Value = payment.VatHighAmount;
+                    cmd.Parameters.Add("@Method", System.Data.SqlDbType.Int).Value = (int)payment.PaymentMethod;
+                    cmd.Parameters.Add("@Feedback", System.Data.SqlDbType.NVarChar).Value =
+                        (object?)payment.Feedback ?? DBNull.Value;
+                    cmd.Parameters.Add("@PaidAt", System.Data.SqlDbType.DateTime).Value = payment.PaidAt;
+                    cmd.ExecuteNonQuery();
+                }
+
+                SqlCommand markPaid = new SqlCommand(
+                    "UPDATE dbo.Orders SET Status = @Paid WHERE OrderId = @OrderId",
+                    conn, transaction);
+                markPaid.Parameters.Add("@Paid", System.Data.SqlDbType.Int).Value = (int)OrderStatus.Paid;
+                markPaid.Parameters.Add("@OrderId", System.Data.SqlDbType.Int).Value = orderId;
+                markPaid.ExecuteNonQuery();
+
+                SqlCommand freeTable = new SqlCommand(@"
+                    UPDATE dbo.Tables
+                    SET Status = 0,
+                        CurrentOrderId = NULL,
+                        OccupiedSince = NULL,
+                        LastUpdated = SYSUTCDATETIME()
+                    WHERE TableId = (SELECT TableId FROM dbo.Orders WHERE OrderId = @OrderId)",
+                    conn, transaction);
+                freeTable.Parameters.Add("@OrderId", System.Data.SqlDbType.Int).Value = orderId;
+                freeTable.ExecuteNonQuery();
 
                 transaction.Commit();
             }

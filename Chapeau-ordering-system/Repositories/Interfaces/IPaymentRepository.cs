@@ -5,5 +5,6 @@ namespace Chapeau_ordering_system.Repositories.Interfaces
     {
         Order? GetOpenOrderByTable(int tableId);
         void FinishOrder(Payment payment);
+        void FinishOrderWithSplit(List<Payment> payments);
     }
 }

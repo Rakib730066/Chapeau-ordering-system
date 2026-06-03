@@ -30,12 +30,10 @@ builder.Services.AddScoped<IMenuItemService, MenuItemService>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 
-// Payment module (Sprint 1: view order with VAT)
+// Payment module
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 
-// I register Bar/Kitchen repository and service for dependency injection
-// I use the dummy repository until the real menu and table database tables are ready
 builder.Services.AddScoped<IBarKitchenRepository, DummyBarKitchenRepository>();
 builder.Services.AddScoped<IBarKitchenService, BarKitchenService>();
 
