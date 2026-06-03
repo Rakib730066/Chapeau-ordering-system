@@ -33,6 +33,7 @@ namespace Chapeau_ordering_system.Controllers
             };
             return View(model);
         }
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult ChangeStatus(int tableId, int newStatus)
