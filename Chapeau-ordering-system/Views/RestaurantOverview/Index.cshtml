@@ -35,6 +35,21 @@
             <span class="badge bg-secondary ms-1">@ViewData["EmployeeRole"]</span>
         </span>
     </div>
+
+    @if (TempData["ErrorMessage"] is string errorMessage)
+    {
+        <div class="alert alert-danger">
+            @errorMessage
+        </div>
+    }
+
+    @if (TempData["ConfirmMessage"] is string confirmMessage)
+    {
+        <div class="alert alert-success">
+            @confirmMessage
+        </div>
+    }
+
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="mb-0">Tables</h5>
         <form method="get" asp-action="Index">
@@ -45,42 +60,60 @@
         @foreach (var t in tables)
         {
             var orders = Model.GetOrdersForTable(t.TableId).ToList();
-                <div class="card border @BorderClass(t.Status)">
-                    <div class="card-header d-flex justify-content-between align-items-center py-2">
-                        <strong>Table @t.TableNumber</strong>
-                        <span class="badge @BadgeClass(t.Status)">@t.Status</span>
-                    </div>
-                    <div class="card-body p-2">
-                        <div class="small text-muted">Seats: @t.NumberOfSeats</div>
+
+            <div class="card border @BorderClass(t.Status)">
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <strong>Table @t.TableNumber</strong>
+                    <a asp-controller="Order" asp-action="Menu" asp-route-tableId="@t.TableId"
+                       class="btn btn-sm btn-primary ms-2">Take Order</a>
+                    <span class="badge @BadgeClass(t.Status)">@t.Status</span>
+                </div>
+                <div class="card-body p-2">
+                    <div class="small text-muted">Seats: @t.NumberOfSeats</div>
                     @if (t.OccupiedSince.HasValue)
                     {
-                                <div class="small text-muted">Since: @t.OccupiedSince.Value.ToShortTimeString()</div>
+                        <div class="small text-muted">Since: @t.OccupiedSince.Value.ToShortTimeString()</div>
                     }
                     @if (orders.Any())
                     {
-                                <hr class="my-2">
+                        <hr class="my-2">
                         @foreach (var order in orders)
                         {
                             @foreach (var item in order.OrderItems)
                             {
-                                                <div class="d-flex justify-content-between align-items-center py-1">
-                                                    <span class="small">@item.Quantity&times; @item.MenuItem?.Name</span>
-                                                    <span class="badge @ItemBadgeClass(item.Status) ms-2">@item.Status</span>
-                                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-1">
+                                    <span class="small">@item.Quantity&times; @item.MenuItem?.Name</span>
+                                    <span class="badge @ItemBadgeClass(item.Status) ms-2">@item.Status</span>
+                                </div>
                             }
                         }
 
                         @* Pay button: shown when the table has an open order ready to be paid *@
-                                <div class="mt-2">
-                                    <a asp-controller="Payment" asp-action="ViewOrder"
-                                       asp-route-tableId="@t.TableId"
-                                       class="btn btn-sm btn-primary w-100">
-                                        Pay
-                                    </a>
-                                </div>
+                        <div class="mt-2">
+                            <a asp-controller="Payment" asp-action="ViewOrder"
+                               asp-route-tableId="@t.TableId"
+                               class="btn btn-sm btn-success w-100">
+                                Pay
+                            </a>
+                        </div>
                     }
-                    </div>
+
+                    @if (t.IsFree)
+                    {
+                        <form asp-controller="Order" asp-action="StartOrder" method="post" class="mt-2">
+                            <input type="hidden" name="tableId" value="@t.TableId" />
+                            <button type="submit" class="btn btn-sm btn-primary w-100">Start Order</button>
+                        </form>
+                    }
+                    else if (t.Status == TableStatus.Occupied && t.CurrentOrderId.HasValue)
+                    {
+                        <form asp-controller="Order" asp-action="LoadOrder" method="post" class="mt-2">
+                            <input type="hidden" name="tableId" value="@t.TableId" />
+                            <button type="submit" class="btn btn-sm btn-warning w-100">Load Order</button>
+                        </form>
+                    }
                 </div>
+            </div>
         }
     </div>
 </div>

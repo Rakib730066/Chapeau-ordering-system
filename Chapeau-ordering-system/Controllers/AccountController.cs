@@ -1,4 +1,5 @@
-﻿using Chapeau_ordering_system.Services.Interfaces;
+﻿using Chapeau_ordering_system.Models.Enums;
+using Chapeau_ordering_system.Services.Interfaces;
 using Chapeau_ordering_system.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 
@@ -38,14 +39,10 @@ namespace Chapeau_ordering_system.Controllers
             HttpContext.Session.SetString("EmployeeRole", employee.Role.ToString());
 
             // Redirect based on employee role
-            if (employee.Role.ToString() == "Bar" || employee.Role.ToString() == "Kitchen")
-            {
+            if (employee.Role == EmployeeRole.Bar || employee.Role == EmployeeRole.Kitchen)
                 return RedirectToAction("Index", "BarKitchen");
-            }
-            else
-            {
-                return RedirectToAction("Index", "RestaurantOverview");
-            }
+
+            return RedirectToAction("Index", "RestaurantOverview");
         }
 
         [HttpPost]
