@@ -1,5 +1,4 @@
 using Chapeau_ordering_system.Models.Enums;
-
 namespace Chapeau_ordering_system.Models
 {
     public class MenuItem
@@ -12,9 +11,7 @@ namespace Chapeau_ordering_system.Models
         public CardType Card { get; set; }
         public decimal VatRate { get; set; }
         public int Stock { get; set; }
-
-
         public bool IsOutOfStock => Stock <= 0;
         public bool IsLowStock => Stock > 0 && Stock <= 10;
-    }   
+    }
 }

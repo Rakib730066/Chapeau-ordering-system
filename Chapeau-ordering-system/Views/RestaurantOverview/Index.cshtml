@@ -1,37 +1,32 @@
 @model Chapeau_ordering_system.ViewModels.RestaurantOverviewViewModel
 @using Chapeau_ordering_system.Models.Enums
-
 @{
     ViewData["Title"] = "Restaurant Overview";
     var tables = Model.Tables.OrderBy(t => t.TableNumber).ToList();
 }
-
 @functions {
     static string BadgeClass(TableStatus status) => status switch
     {
-        TableStatus.Free     => "bg-success",
+        TableStatus.Free => "bg-success",
         TableStatus.Occupied => "bg-danger",
         TableStatus.Reserved => "bg-warning text-dark",
-        _                    => "bg-secondary"
+        _ => "bg-secondary"
     };
-
     static string BorderClass(TableStatus status) => status switch
     {
-        TableStatus.Free     => "border-success",
+        TableStatus.Free => "border-success",
         TableStatus.Occupied => "border-danger",
-        _                    => "border-secondary"
+        _ => "border-secondary"
     };
-
     static string ItemBadgeClass(OrderItemStatus status) => status switch
     {
-        OrderItemStatus.Ordered         => "bg-primary",
-        OrderItemStatus.BeingPrepared   => "bg-warning text-dark",
+        OrderItemStatus.Ordered => "bg-primary",
+        OrderItemStatus.BeingPrepared => "bg-warning text-dark",
         OrderItemStatus.ReadyToBeServed => "bg-success",
-        OrderItemStatus.Served          => "bg-secondary",
-        _                               => "bg-secondary"
+        OrderItemStatus.Served => "bg-secondary",
+        _ => "bg-secondary"
     };
 }
-
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Restaurant Overview</h2>
@@ -55,14 +50,12 @@
         </div>
     }
 
-
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="mb-0">Tables</h5>
         <form method="get" asp-action="Index">
             <button type="submit" class="btn btn-sm btn-outline-primary">Refresh</button>
         </form>
     </div>
-
     <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:16px;">
         @foreach (var t in tables)
         {
@@ -81,7 +74,6 @@
                     {
                         <div class="small text-muted">Since: @t.OccupiedSince.Value.ToShortTimeString()</div>
                     }
-
                     @if (orders.Any())
                     {
                         <hr class="my-2">
@@ -95,6 +87,15 @@
                                 </div>
                             }
                         }
+
+                        @* Pay button: shown when the table has an open order ready to be paid *@
+                        <div class="mt-2">
+                            <a asp-controller="Payment" asp-action="ViewOrder"
+                               asp-route-tableId="@t.TableId"
+                               class="btn btn-sm btn-success w-100">
+                                Pay
+                            </a>
+                        </div>
                     }
 
                     @if (t.IsFree)

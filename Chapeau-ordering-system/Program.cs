@@ -6,6 +6,7 @@ using Chapeau_ordering_system.Services.Interfaces;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
+
 builder.Services.AddDistributedMemoryCache();
 
 builder.Services.AddSession(options =>
@@ -29,10 +30,12 @@ builder.Services.AddScoped<IMenuItemService, MenuItemService>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 
+// Payment module
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+
 builder.Services.AddScoped<IBarKitchenRepository, DummyBarKitchenRepository>();
 builder.Services.AddScoped<IBarKitchenService, BarKitchenService>();
-
-
 
 var app = builder.Build();
 
@@ -44,8 +47,11 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
 app.UseRouting();
+
 app.UseSession();
+
 app.UseAuthorization();
 
 app.MapControllerRoute(
@@ -53,4 +59,3 @@ app.MapControllerRoute(
     pattern: "{controller=Account}/{action=Login}/{id?}");
 
 app.Run();
- 

@@ -7,6 +7,10 @@
     <RootNamespace>Chapeau_ordering_system</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Content Remove="ViewModels\FinishOrderViewModel.cshtml" />
+  </ItemGroup>
+
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.1" />
 		<PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
