@@ -91,7 +91,7 @@ namespace Chapeau_ordering_system.Repositories
             INNER JOIN Tables t ON o.TableId = t.TableId
             INNER JOIN Employees e ON o.EmployeeId = e.EmployeeId
             WHERE mi.Type = @MenuItemType
-            AND oi.Status IN (@OrderedStatus, @BeingPreparedStatus) // recommendation
+            AND oi.Status IN (@OrderedStatus, @BeingPreparedStatus) -- recommendation
             ORDER BY o.OrderTime ASC";
 
         using (SqlConnection connection = new SqlConnection(_connectionString))

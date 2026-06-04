@@ -3,9 +3,9 @@
 
 @{
     bool isFinishedView = false;
-    if (ViewData["IsFinishedView"] != null && ViewData["IsFinishedView"] is bool)
+    if (ViewData["IsFinishedView"] != null)
     {
-        isFinishedView = (bool)ViewData["IsFinishedView"];
+        _ = bool.TryParse(ViewData["IsFinishedView"]?.ToString(), out isFinishedView);
     }
 }
 
