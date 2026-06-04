@@ -1,0 +1,81 @@
+@using Chapeau_ordering_system.Models.Enums
+@model OrderItem
+
+@{
+    bool isFinishedView = false;
+    if (ViewData["IsFinishedView"] != null && ViewData["IsFinishedView"] is bool)
+    {
+        isFinishedView = (bool)ViewData["IsFinishedView"];
+    }
+}
+
+<div class="border rounded p-2 mb-2 @(isFinishedView ? "border-success bg-light" : "")">
+    <p class="mb-1">
+        <strong>@Model.Quantity x @(Model.MenuItem?.Name ?? "Unknown Item")</strong>
+    </p>
+
+    @if (!string.IsNullOrEmpty(Model.Comment))
+    {
+        <p class="mb-1">
+            <strong>Comment:</strong> @Model.Comment
+        </p>
+    }
+
+    <p class="mb-1">
+        <strong>Status:</strong>
+
+        @if (isFinishedView)
+        {
+            <span class="badge bg-success">
+                @Model.Status
+            </span>
+        }
+        else if (Model.Status == OrderItemStatus.Ordered)
+        {
+            <span class="badge bg-warning text-dark">
+                @Model.Status
+            </span>
+        }
+        else if (Model.Status == OrderItemStatus.BeingPrepared)
+        {
+            <span class="badge bg-info text-dark">
+                @Model.Status
+            </span>
+        }
+        else
+        {
+            <span class="badge bg-secondary">
+                @Model.Status
+            </span>
+        }
+    </p>
+
+    @if (isFinishedView)
+    {
+        <p class="mb-0 text-success">
+            <strong>Ready for waiter to serve</strong>
+        </p>
+    }
+
+    @if (!isFinishedView)
+    {
+        @if (Model.Status == OrderItemStatus.Ordered)
+        {
+            <form asp-controller="BarKitchen" asp-action="StartItem" method="post">
+                <input type="hidden" name="orderItemId" value="@Model.OrderItemId" />
+                <button type="submit" class="btn btn-warning btn-sm">
+                    Start Item
+                </button>
+            </form>
+        }
+        else if (Model.Status == OrderItemStatus.BeingPrepared)
+        {
+            <form asp-controller="BarKitchen" asp-action="MarkItemReady" method="post">
+                <input type="hidden" name="orderItemId" value="@Model.OrderItemId" />
+                <button type="submit" class="btn btn-success btn-sm">
+                    Mark Item Ready
+                </button>
+            </form>
+        }
+    }
+</div>
