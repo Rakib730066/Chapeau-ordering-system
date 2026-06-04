@@ -1,0 +1,134 @@
+﻿@model Chapeau_ordering_system.ViewModels.SplitPaymentViewModel
+@using Chapeau_ordering_system.Models.Enums
+@using Chapeau_ordering_system.ViewModels
+
+@{
+    ViewData["Title"] = "Split Payment";
+    decimal sumSoFar = Model.Payments?.Sum(p => p.AmountPaid) ?? 0m;
+    decimal remaining = Model.TotalToPay - sumSoFar;
+    if (remaining < 0) remaining = 0;
+}
+
+<div class="container mt-4">
+    <h2>Split Payment — Table @Model.TableNumber</h2>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <p class="mb-1"><strong>Total to pay:</strong> €@Model.TotalToPay.ToString("0.00")</p>
+            <p class="mb-1 text-muted small">
+                VAT 9%: €@Model.VatLow.ToString("0.00") &nbsp;·&nbsp;
+                VAT 21%: €@Model.VatHigh.ToString("0.00")
+            </p>
+            <p class="mb-0">
+                <strong>Sum of payments so far:</strong> €@sumSoFar.ToString("0.00")
+                @if (remaining > 0)
+                {
+                    <span class="text-danger ms-2"><strong>Remaining: €@remaining.ToString("0.00")</strong></span>
+                }
+                else
+                {
+                    <span class="text-success ms-2"><strong>✓ Fully covered</strong></span>
+                }
+            </p>
+        </div>
+    </div>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger">
+            <ul class="mb-0">
+                @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                {
+                    <li>@error.ErrorMessage</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <form asp-action="SplitOrder" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="OrderId" />
+        <input type="hidden" asp-for="TableId" />
+        <input type="hidden" asp-for="TableNumber" />
+        <input type="hidden" asp-for="TotalToPay" />
+        <input type="hidden" asp-for="VatLow" />
+        <input type="hidden" asp-for="VatHigh" />
+
+        <div class="mb-3">
+            <label class="form-label"><strong>Split mode</strong></label>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" asp-for="Mode"
+                       value="@SplitMode.Equal" id="modeEqual" />
+                <label class="form-check-label" for="modeEqual">
+                    Equal split — divide total equally among N people
+                </label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" asp-for="Mode"
+                       value="@SplitMode.Custom" id="modeCustom" />
+                <label class="form-check-label" for="modeCustom">
+                    Different amounts — each person pays a custom amount
+                </label>
+            </div>
+        </div>
+
+        @if (Model.Mode == SplitMode.Equal)
+        {
+            <div class="mb-3">
+                <label asp-for="NumberOfPeople" class="form-label">Number of people</label>
+                <input asp-for="NumberOfPeople" type="number" min="2" max="20" class="form-control" style="max-width: 200px;" />
+                <span asp-validation-for="NumberOfPeople" class="text-danger"></span>
+                <button type="submit" name="action" value="recalc" class="btn btn-sm btn-outline-primary mt-2">
+                    Update split
+                </button>
+                <div class="form-text">
+                    Each person's share: €@(Model.NumberOfPeople > 0 ? Math.Round(Model.TotalToPay / Model.NumberOfPeople, 2).ToString("0.00") : "0.00")
+                </div>
+            </div>
+        }
+
+        <h5 class="mt-4">Per-person payments</h5>
+        <p class="text-muted small">
+            @if (Model.Mode == SplitMode.Equal)
+            {
+                <text>Each amount is pre-filled with the equal share. Paying more = tip.</text>
+            }
+            else
+            {
+                <text>Enter each person's amount. The sum must cover the bill total.</text>
+            }
+        </p>
+
+        @for (int i = 0; i < Model.Payments.Count; i++)
+        {
+            <div class="card mb-2">
+                <div class="card-body p-2">
+                    <strong>Person @(i + 1)</strong>
+                    <div class="row g-2 mt-1">
+                        <div class="col-md-3">
+                            <label class="form-label small">Amount (€)</label>
+                            <input asp-for="Payments[i].AmountPaid" type="number" step="0.01" min="0"
+                                   class="form-control form-control-sm" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Method</label>
+                            <select asp-for="Payments[i].PaymentMethod" class="form-select form-select-sm"
+                                    asp-items="Html.GetEnumSelectList<PaymentMethod>()">
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Feedback (optional)</label>
+                            <input asp-for="Payments[i].Feedback" type="text"
+                                   class="form-control form-control-sm" placeholder="e.g. Great service" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="mt-3">
+            <button type="submit" class="btn btn-success">Confirm split payment</button>
+            <a asp-action="ViewOrder" asp-route-tableId="@Model.TableId" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>

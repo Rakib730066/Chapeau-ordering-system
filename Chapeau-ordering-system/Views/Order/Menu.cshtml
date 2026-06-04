@@ -1,0 +1,149 @@
+﻿@model Chapeau_ordering_system.ViewModels.MenuViewModel
+@using Chapeau_ordering_system.Models.Enums
+
+@{
+    ViewData["Title"] = "Menu";
+}
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Menu — Table @Model.TableId</h2>
+        <a asp-controller="RestaurantOverview" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+            &larr; Back to Overview
+        </a>
+    </div>
+
+    @* ── Card type filter buttons (All / Food / Drinks) ── *@
+    <div class="mb-3">
+        <span class="fw-semibold me-2">Card:</span>
+
+        <a asp-action="Menu"
+           asp-route-tableId="@Model.TableId"
+           asp-route-course="@((int?)Model.ActiveCourse)"
+           class="btn btn-sm @(Model.ActiveType == null ? "btn-dark" : "btn-outline-dark") me-1">
+            All
+        </a>
+
+        <a asp-action="Menu"
+           asp-route-tableId="@Model.TableId"
+           asp-route-type="@((int)MenuItemType.Food)"
+           asp-route-course="@((int?)Model.ActiveCourse)"
+           class="btn btn-sm @(Model.ActiveType == MenuItemType.Food ? "btn-dark" : "btn-outline-dark") me-1">
+            Food
+        </a>
+
+        <a asp-action="Menu"
+           asp-route-tableId="@Model.TableId"
+           asp-route-type="@((int)MenuItemType.Drink)"
+           asp-route-course="@((int?)Model.ActiveCourse)"
+           class="btn btn-sm @(Model.ActiveType == MenuItemType.Drink ? "btn-dark" : "btn-outline-dark") me-1">
+            Drinks
+        </a>
+    </div>
+
+    @* ── Card filter buttons (All / Lunch / Dinner / Drinks) ── *@
+    <div class="mb-3">
+        <span class="fw-semibold me-2">Card:</span>
+
+        <a asp-action="Menu"
+           asp-route-tableId="@Model.TableId"
+           asp-route-course="@((int?)Model.ActiveCourse)"
+           asp-route-card="@((int?)Model.ActiveCard)"
+           class="btn btn-sm @(Model.ActiveCard == null ? "btn-dark" : "btn-outline-dark") me-1">
+            All
+        </a>
+
+        @foreach (CardType cardType in Enum.GetValues<CardType>())
+        {
+            <a asp-action="Menu"
+               asp-route-tableId="@Model.TableId"
+               asp-route-card="@((int)cardType)"
+               asp-route-course="@((int?)Model.ActiveCourse)"
+               class="btn btn-sm @(Model.ActiveCard == cardType ? "btn-dark" : "btn-outline-dark") me-1">
+                @cardType
+            </a>
+        }
+    </div>
+
+    @* ── Course filter buttons (only shown for food) ── *@
+    @if (Model.ActiveType == null || Model.ActiveType == MenuItemType.Food)
+    {
+        <div class="mb-4">
+            <span class="fw-semibold me-2">Course:</span>
+
+            <a asp-action="Menu"
+               asp-route-tableId="@Model.TableId"
+               asp-route-type="@((int?)Model.ActiveType)"
+               class="btn btn-sm @(Model.ActiveCourse == null ? "btn-secondary" : "btn-outline-secondary") me-1">
+                All courses
+            </a>
+
+            @foreach (CourseType course in Enum.GetValues<CourseType>().Where(c => c != CourseType.None))
+            {
+                <a asp-action="Menu"
+                   asp-route-tableId="@Model.TableId"
+                   asp-route-type="@((int?)Model.ActiveType)"
+                   asp-route-course="@((int)course)"
+                   class="btn btn-sm @(Model.ActiveCourse == course ? "btn-secondary" : "btn-outline-secondary") me-1">
+                    @course
+                </a>
+            }
+        </div>
+    }
+
+    @* ── Menu items table ── *@
+    @if (!Model.MenuItems.Any())
+    {
+        <div class="alert alert-info">No menu items found for the selected filters.</div>
+    }
+    else
+    {
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Item</th>
+                    <th>Course</th>
+                    <th>Card</th>
+                    <th class="text-end">Price</th>
+                    <th class="text-center">Stock</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.MenuItems)
+                {
+                    <tr class="@(item.IsOutOfStock ? "table-danger" : "")">
+                        <td><span class="fw-semibold">@item.Name</span></td>
+                        <td>@(item.Course == CourseType.None ? "—" : item.Course.ToString())</td>
+                        <td>
+                            @if (item.Type == MenuItemType.Drink)
+                            {
+                                <span class="badge bg-info text-dark">Drink</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">Food</span>
+                            }
+                        </td>
+                        <td class="text-end">&euro; @item.Price.ToString("0.00")</td>
+                        <td class="text-center">
+                            @if (item.IsOutOfStock)
+                            {
+                                <span class="badge bg-danger">Out of stock</span>
+                            }
+                            else if (item.IsLowStock)
+                            {
+                                <span class="badge bg-warning text-dark">Low (@item.Stock left)</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">@item.Stock</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+</div>

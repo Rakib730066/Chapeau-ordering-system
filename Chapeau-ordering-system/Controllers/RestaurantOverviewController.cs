@@ -19,6 +19,8 @@ namespace Chapeau_ordering_system.Controllers
 
         public IActionResult Index()
         {
+           
+
             string? employeeRole = HttpContext.Session.GetString("EmployeeRole");
             if (string.IsNullOrEmpty(employeeRole))
                 return RedirectToAction("Login", "Account");
@@ -31,8 +33,10 @@ namespace Chapeau_ordering_system.Controllers
                 Tables = _tableService.GetAllTables(),
                 OpenOrders = _orderService.GetOpenOrders()
             };
+
             return View(model);
         }
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult ChangeStatus(int tableId, int newStatus)

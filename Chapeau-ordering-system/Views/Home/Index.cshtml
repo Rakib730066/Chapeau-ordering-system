@@ -1,8 +1,68 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@model Chapeau_ordering_system.ViewModels.RestaurantOverviewViewModel
+@using Chapeau_ordering_system.Models.Enums
+
+@{
+    ViewData["Title"] = "Restaurant Overview";
+    var userRole = ViewData["EmployeeRole"]?.ToString();
+    bool isWaiter = !string.IsNullOrEmpty(userRole) && userRole.Equals("Waiter", StringComparison.OrdinalIgnoreCase);
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container mt-4">
+    <h2 class="mb-4">Restaurant Overview</h2>
+
+    @if (!isWaiter)
+    {
+        <div class="alert alert-info">
+            You are viewing the restaurant overview as a guest. To modify orders, please <a href="@Url.Action("Login", "Account")" class="alert-link">login as a Waiter</a>.
+        </div>
+    }
+
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        @foreach (var table in Model.Tables)
+        {
+            var isOccupied = table.Status == TableStatus.Occupied;
+            var tableOrders = Model.GetOrdersForTable(table.TableId).ToList();
+
+            <div class="col">
+                <div class="card h-100 @(isOccupied ? "border-primary" : "border-success")">
+                    <div class="card-header d-flex justify-content-between align-items-center @(isOccupied ? "bg-primary text-white" : "bg-success text-white")">
+                        <h5 class="mb-0">Table @table.TableId</h5>
+                        <span class="badge bg-light text-dark">@table.Status</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">Seats: @table.NumberOfSeats</p>
+
+                        @if (isOccupied && tableOrders.Any())
+                        {
+                            var latestOrder = tableOrders.OrderByDescending(o => o.OrderTime).First();
+                            <p class="mb-1 text-muted"><small>Occupied since @table.OccupiedSince?.ToString("HH:mm")</small></p>
+                            <p class="mb-2"><strong>Current Order: #@latestOrder.OrderId</strong></p>
+                            <p class="mb-0"><small>Items: @latestOrder.OrderItems.Sum(i => i.Quantity)</small></p>
+                        }
+                        else if (isOccupied)
+                        {
+                           <p class="mb-0 text-muted"><small>Occupied since @table.OccupiedSince?.ToString("HH:mm")</small></p>
+                           <p class="mb-0">No active orders yet.</p>
+                        }
+                        else
+                        {
+                            <p class="mb-0 text-muted">Table is free.</p>
+                        }
+                    </div>
+                    <div class="card-footer bg-transparent border-top-0 pb-3">
+                        @if (isWaiter)
+                        {
+                            <a href="@Url.Action("TakeOrder", "Order", new { tableId = table.TableId })" class="btn btn-outline-primary w-100">
+                                @(isOccupied ? "Manage Order" : "Take New Order")
+                            </a>
+                        }
+                        else
+                        {
+                           <button class="btn btn-outline-secondary w-100" disabled>Take New Order (Login Required)</button>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
 </div>
