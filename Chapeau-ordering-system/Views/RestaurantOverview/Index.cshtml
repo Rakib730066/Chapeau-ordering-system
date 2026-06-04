@@ -122,12 +122,27 @@
                             <input type="hidden" name="tableId" value="@t.TableId" />
                             <button type="submit" class="btn btn-sm btn-primary w-100">Start Order</button>
                         </form>
-                    }
-                    else if (t.Status == TableStatus.Occupied && t.CurrentOrderId.HasValue)
-                    {
-                        <form asp-controller="Order" asp-action="LoadOrder" method="post" class="mt-2">
+                        <form asp-controller="RestaurantOverview" asp-action="ChangeStatus" method="post" class="mt-1">
+                            @Html.AntiForgeryToken()
                             <input type="hidden" name="tableId" value="@t.TableId" />
-                            <button type="submit" class="btn btn-sm btn-warning w-100">Load Order</button>
+                            <input type="hidden" name="newStatus" value="1" />
+                            <button type="submit" class="btn btn-sm btn-outline-danger w-100">Mark as Occupied</button>
+                        </form>
+                    }
+                    else if (t.Status == TableStatus.Occupied)
+                    {
+                        @if (t.CurrentOrderId.HasValue)
+                        {
+                            <form asp-controller="Order" asp-action="LoadOrder" method="post" class="mt-2">
+                                <input type="hidden" name="tableId" value="@t.TableId" />
+                                <button type="submit" class="btn btn-sm btn-warning w-100">Load Order</button>
+                            </form>
+                        }
+                        <form asp-controller="RestaurantOverview" asp-action="ChangeStatus" method="post" class="mt-1">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="tableId" value="@t.TableId" />
+                            <input type="hidden" name="newStatus" value="0" />
+                            <button type="submit" class="btn btn-sm btn-outline-success w-100">Mark as Free</button>
                         </form>
                     }
                 </div>

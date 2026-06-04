@@ -45,7 +45,7 @@ namespace Chapeau_ordering_system.Controllers
             if (string.IsNullOrEmpty(employeeRole))
                 return RedirectToAction("Login", "Account");
 
-            TableStatus status = (TableStatus)newStatus;
+            TableStatus status = (TableStatus)newStatus; // casting , converting tableStatus int to enum .
 
             if (status == TableStatus.Free && _orderService.TableHasUnservedItems(tableId))
             {
@@ -56,6 +56,7 @@ namespace Chapeau_ordering_system.Controllers
             _tableService.UpdateStatus(tableId, status);
             return RedirectToAction("Index");
         }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult MarkServed(int orderItemId)
