@@ -62,6 +62,8 @@ namespace Chapeau_ordering_system.Repositories
             orderItem.Comment = reader["Comment"] == DBNull.Value ? null : (string)reader["Comment"];
             orderItem.Status = (OrderItemStatus)(int)reader["OrderItemStatus"];
             orderItem.OrderTime = (DateTime)reader["OrderItemTime"];
+            orderItem.ReadyAt = reader["ReadyAt"] == DBNull.Value ? default : (DateTime)reader["ReadyAt"];
+            orderItem.StartedAt = reader["StartedAt"] == DBNull.Value ? default : (DateTime)reader["StartedAt"];
             return orderItem;
         }
 
@@ -78,6 +80,7 @@ namespace Chapeau_ordering_system.Repositories
                 e.FirstName, e.LastName, e.Role, o.OrderTime, o.Status,
                 oi.OrderItemId, oi.MenuItemId, oi.Quantity, oi.Comment,
                 oi.Status AS OrderItemStatus, oi.OrderTime AS OrderItemTime,
+                oi.StartedAt, oi.ReadyAt,
                 mi.Name AS MenuItemName, mi.Price, mi.Type, mi.Course
             FROM Orders o
             INNER JOIN OrderItems oi ON o.OrderId = oi.OrderId
@@ -85,6 +88,7 @@ namespace Chapeau_ordering_system.Repositories
             INNER JOIN Tables t ON o.TableId = t.TableId
             INNER JOIN Employees e ON o.EmployeeId = e.EmployeeId
             WHERE mi.Type = @MenuItemType
+            AND o.Status IN (@OpenStatus, @SubmittedStatus)
             AND oi.Status IN (@OrderedStatus, @BeingPreparedStatus) -- recommendation
             ORDER BY o.OrderTime ASC";
 
@@ -92,6 +96,8 @@ namespace Chapeau_ordering_system.Repositories
                 using (SqlCommand command = new SqlCommand(query, connection))
                 {
                     command.Parameters.AddWithValue("@MenuItemType", (int)menuItemType);
+                    command.Parameters.AddWithValue("@OpenStatus", (int)OrderStatus.Open);
+                    command.Parameters.AddWithValue("@SubmittedStatus", (int)OrderStatus.Submitted);
                     command.Parameters.AddWithValue("@OrderedStatus", (int)OrderItemStatus.Ordered);
                     command.Parameters.AddWithValue("@BeingPreparedStatus", (int)OrderItemStatus.BeingPrepared);
 
@@ -133,12 +139,16 @@ namespace Chapeau_ordering_system.Repositories
             Dictionary<int, Order> orders = new Dictionary<int, Order>();
             try
             {
+                DateTime todayStart = DateTime.Today;            
+                DateTime tomorrowStart = todayStart.AddDays(1);  
+
                 string query = @"
                     SELECT 
                         o.OrderId, o.TableId, t.TableNumber, o.EmployeeId,
                         e.FirstName, e.LastName, e.Role, o.OrderTime, o.Status,
                         oi.OrderItemId, oi.MenuItemId, oi.Quantity, oi.Comment,
                         oi.Status AS OrderItemStatus, oi.OrderTime AS OrderItemTime,
+                        oi.StartedAt, oi.ReadyAt,
                         mi.Name AS MenuItemName, mi.Price, mi.Type, mi.Course
                     FROM Orders o
                     INNER JOIN OrderItems oi ON o.OrderId = oi.OrderId
@@ -146,16 +156,22 @@ namespace Chapeau_ordering_system.Repositories
                     INNER JOIN Tables t ON o.TableId = t.TableId
                     INNER JOIN Employees e ON o.EmployeeId = e.EmployeeId
                     WHERE mi.Type = @MenuItemType
+                    AND o.Status IN (@OpenStatus, @SubmittedStatus)
                     AND oi.Status IN (@ReadyToBeServedStatus, @ServedStatus)  -- recommendation
-                    AND CAST(o.OrderTime AS DATE) = CAST(GETDATE() AS DATE)
-                    ORDER BY o.OrderTime ASC";
+                    AND oi.ReadyAt >= @TodayStart
+                    AND oi.ReadyAt < @TomorrowStart
+                    ORDER BY oi.ReadyAt ASC";
 
                 using (SqlConnection connection = new SqlConnection(_connectionString))
                 using (SqlCommand command = new SqlCommand(query, connection))
                 {
                     command.Parameters.AddWithValue("@MenuItemType", (int)menuItemType);
+                    command.Parameters.AddWithValue("@OpenStatus", (int)OrderStatus.Open);
+                    command.Parameters.AddWithValue("@SubmittedStatus", (int)OrderStatus.Submitted);
                     command.Parameters.AddWithValue("@ReadyToBeServedStatus", (int)OrderItemStatus.ReadyToBeServed);
                     command.Parameters.AddWithValue("@ServedStatus", (int)OrderItemStatus.Served);
+                    command.Parameters.AddWithValue("@TodayStart", todayStart);
+                    command.Parameters.AddWithValue("@TomorrowStart", tomorrowStart);
                     connection.Open();
                     using (SqlDataReader reader = command.ExecuteReader())
                     {
@@ -189,13 +205,24 @@ namespace Chapeau_ordering_system.Repositories
         {
             try
             {
+                DateTime now = DateTime.Now; //capture current time
+
                 using (SqlConnection connection = new SqlConnection(_connectionString))
                 using (SqlCommand command = new SqlCommand(
-                    "UPDATE OrderItems SET Status = @NewStatus WHERE OrderId = @OrderId AND Status = @OldStatus AND MenuItemId IN (SELECT MenuItemId FROM MenuItems WHERE Type = @MenuItemType)",
+                    @"UPDATE OrderItems
+                      SET Status = @NewStatus,
+                          StartedAt = CASE WHEN @NewStatus = @BeingPreparedStatus THEN @Now ELSE StartedAt END,
+                          ReadyAt = CASE WHEN @NewStatus = @ReadyStatus THEN @Now ELSE ReadyAt END
+                      WHERE OrderId = @OrderId
+                      AND Status = @OldStatus
+                      AND MenuItemId IN (SELECT MenuItemId FROM MenuItems WHERE Type = @MenuItemType)",
                     connection))
                 {
                     command.Parameters.AddWithValue("@NewStatus", (int)newStatus);
                     command.Parameters.AddWithValue("@OldStatus", (int)oldStatus);
+                    command.Parameters.AddWithValue("@BeingPreparedStatus", (int)OrderItemStatus.BeingPrepared);
+                    command.Parameters.AddWithValue("@ReadyStatus", (int)OrderItemStatus.ReadyToBeServed);
+                    command.Parameters.AddWithValue("@Now", now); //use capture time
                     command.Parameters.AddWithValue("@MenuItemType", (int)menuItemType);
                     command.Parameters.AddWithValue("@OrderId", orderId);
 
@@ -214,13 +241,24 @@ namespace Chapeau_ordering_system.Repositories
         {
             try
             {
+                DateTime now = DateTime.Now;   //capture current time 
+
                 using (SqlConnection connection = new SqlConnection(_connectionString))
                 using (SqlCommand command = new SqlCommand(
-                    "UPDATE OrderItems SET Status = @NewStatus WHERE OrderItemId = @OrderItemId AND Status = @OldStatus AND MenuItemId IN (SELECT MenuItemId FROM MenuItems WHERE Type = @MenuItemType)",
+                    @"UPDATE OrderItems
+                      SET Status = @NewStatus,
+                          StartedAt = CASE WHEN @NewStatus = @BeingPreparedStatus THEN @Now ELSE StartedAt END,
+                          ReadyAt = CASE WHEN @NewStatus = @ReadyStatus THEN @Now ELSE ReadyAt END
+                      WHERE OrderItemId = @OrderItemId
+                      AND Status = @OldStatus
+                      AND MenuItemId IN (SELECT MenuItemId FROM MenuItems WHERE Type = @MenuItemType)",
                     connection))
                 {
                     command.Parameters.AddWithValue("@NewStatus", (int)newStatus);
                     command.Parameters.AddWithValue("@OldStatus", (int)oldStatus);
+                    command.Parameters.AddWithValue("@BeingPreparedStatus", (int)OrderItemStatus.BeingPrepared);
+                    command.Parameters.AddWithValue("@ReadyStatus", (int)OrderItemStatus.ReadyToBeServed);
+                    command.Parameters.AddWithValue("@Now", now); //use capture time 
                     command.Parameters.AddWithValue("@MenuItemType", (int)menuItemType);
                     command.Parameters.AddWithValue("@OrderItemId", orderItemId);
 
@@ -239,13 +277,24 @@ namespace Chapeau_ordering_system.Repositories
         {
             try
             {
+                DateTime now = DateTime.Now;
+
                 using (SqlConnection connection = new SqlConnection(_connectionString))
                 using (SqlCommand command = new SqlCommand(
-                    "UPDATE OrderItems SET Status = @NewStatus WHERE OrderId = @OrderId AND Status = @OldStatus AND MenuItemId IN (SELECT MenuItemId FROM MenuItems WHERE Type = @MenuItemType AND Course = @Course)",
+                    @"UPDATE OrderItems
+                      SET Status = @NewStatus,
+                          StartedAt = CASE WHEN @NewStatus = @BeingPreparedStatus THEN @Now ELSE StartedAt END,
+                          ReadyAt = CASE WHEN @NewStatus = @ReadyStatus THEN @Now ELSE ReadyAt END
+                      WHERE OrderId = @OrderId
+                      AND Status = @OldStatus
+                      AND MenuItemId IN (SELECT MenuItemId FROM MenuItems WHERE Type = @MenuItemType AND Course = @Course)",
                     connection))
                 {
                     command.Parameters.AddWithValue("@NewStatus", (int)newStatus);
                     command.Parameters.AddWithValue("@OldStatus", (int)oldStatus);
+                    command.Parameters.AddWithValue("@BeingPreparedStatus", (int)OrderItemStatus.BeingPrepared);
+                    command.Parameters.AddWithValue("@ReadyStatus", (int)OrderItemStatus.ReadyToBeServed);
+                    command.Parameters.AddWithValue("@Now", now);
                     command.Parameters.AddWithValue("@MenuItemType", (int)menuItemType);
                     command.Parameters.AddWithValue("@Course", (int)courseType);
                     command.Parameters.AddWithValue("@OrderId", orderId);
@@ -265,14 +314,22 @@ namespace Chapeau_ordering_system.Repositories
         {
             try
             {
+                DateTime now = DateTime.Now;
+
                 using (SqlConnection connection = new SqlConnection(_connectionString))
                 using (SqlCommand command = new SqlCommand(
-                    "UPDATE OrderItems SET Status = @ReadyStatus WHERE OrderId = @OrderId AND Status IN (@OrderedStatus, @BeingPreparedStatus) AND MenuItemId IN (SELECT MenuItemId FROM MenuItems WHERE Type = @MenuItemType)",
+                    @"UPDATE OrderItems
+                      SET Status = @ReadyStatus,
+                          ReadyAt = @Now
+                      WHERE OrderId = @OrderId
+                      AND Status IN (@OrderedStatus, @BeingPreparedStatus)
+                      AND MenuItemId IN (SELECT MenuItemId FROM MenuItems WHERE Type = @MenuItemType)",
                     connection))
                 {
                     command.Parameters.AddWithValue("@ReadyStatus", (int)OrderItemStatus.ReadyToBeServed);
                     command.Parameters.AddWithValue("@OrderedStatus", (int)OrderItemStatus.Ordered);
                     command.Parameters.AddWithValue("@BeingPreparedStatus", (int)OrderItemStatus.BeingPrepared);
+                    command.Parameters.AddWithValue("@Now", now);
                     command.Parameters.AddWithValue("@MenuItemType", (int)menuItemType);
                     command.Parameters.AddWithValue("@OrderId", orderId);
 

@@ -82,7 +82,21 @@
         <div class="row">
             @foreach (var order in Model.Orders)
             {
-                TimeSpan waitingTime = DateTime.Now - order.OrderTime;
+                DateTime displayTime = order.OrderTime;
+                if (Model.IsFinishedView)
+                {
+                    var finishedTimes = order.OrderItems?
+                        .Where(item => item.ReadyAt != default)
+                        .Select(item => item.ReadyAt)
+                        .ToList() ?? new List<DateTime>();
+
+                    if (finishedTimes.Count > 0)
+                    {
+                        displayTime = finishedTimes.Max();
+                    }
+                }
+
+                TimeSpan waitingTime = DateTime.Now - displayTime;
                 int waitingMinutes = (int)waitingTime.TotalMinutes;
 
                 <div class="col-md-6 mb-4">
@@ -112,12 +126,12 @@
 
                         <div class="card-body">
                             <p>
-                                <strong>Order Time:</strong>
-                                @order.OrderTime.ToString("HH:mm")
+                                <strong>@(Model.IsFinishedView ? "Finished Time:" : "Order Time:")</strong>
+                                @displayTime.ToString("HH:mm")
                             </p>
 
                             <p>
-                                <strong>Waiting Time:</strong>
+                                <strong>@(Model.IsFinishedView ? "Finished:" : "Waiting Time:")</strong>
                                 @waitingMinutes minutes
                             </p>
 
