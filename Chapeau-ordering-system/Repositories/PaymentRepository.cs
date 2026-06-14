@@ -100,7 +100,7 @@ namespace Chapeau_ordering_system.Repositories
             return order;
         }
 
-        // Single payment: insert payment + mark order Paid + free table, in one transaction.
+  
         public void FinishOrder(Payment payment)
         {
             using SqlConnection conn = new SqlConnection(_connectionString);
@@ -157,7 +157,7 @@ namespace Chapeau_ordering_system.Repositories
             }
         }
 
-        // Multiple payments (split): insert N payments + mark order Paid + free table, in one transaction.
+   
         public void FinishOrderWithSplit(List<Payment> payments)
         {
             if (payments == null || payments.Count == 0)
