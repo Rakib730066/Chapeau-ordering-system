@@ -3,7 +3,6 @@ using Chapeau_ordering_system.Models.Enums;
 using Chapeau_ordering_system.Repositories.Interfaces;
 using Chapeau_ordering_system.Services.Interfaces;
 using Chapeau_ordering_system.ViewModels;
-using Microsoft.Data.SqlClient;
 
 namespace Chapeau_ordering_system.Services
 {
@@ -29,66 +28,41 @@ namespace Chapeau_ordering_system.Services
 
             if (Enum.TryParse<EmployeeRole>(roleString, out var role))
             {
-                return role == EmployeeRole.Bar ? MenuItemType.Drink : MenuItemType.Food;
+                if (role == EmployeeRole.Bar)
+                    return MenuItemType.Drink;
+
+                if (role == EmployeeRole.Kitchen)
+                    return MenuItemType.Food;
             }
 
             throw new InvalidOperationException("Invalid employee role in session.");
         }
 
-        // Get ViewModel based on logged-in employee role
-        public BarKitchenViewModel GetBarKitchenViewModel()
-        {
-            MenuItemType menuItemType = GetMenuItemTypeForCurrentEmployee();
-
-            BarKitchenViewModel viewModel = new BarKitchenViewModel();
-            viewModel.MenuItemType = menuItemType;
-            viewModel.PageTitle = menuItemType == MenuItemType.Food ? "Kitchen Orders" : "Bar Orders";
-            viewModel.ReturnPage = menuItemType == MenuItemType.Food ? "Kitchen" : "Bar";
-            viewModel.ViewMode = "running";
-            viewModel.IsFinishedView = false;
-            viewModel.Orders = _orderRepository.GetRunningOrders(menuItemType);
-
-            return viewModel;
-        }
 
         // Get running orders view
         public BarKitchenViewModel GetRunningOrdersViewModel()
         {
             MenuItemType menuItemType = GetMenuItemTypeForCurrentEmployee();
+            List<Order> orders = _orderRepository.GetRunningOrders(menuItemType);
 
-            BarKitchenViewModel viewModel = new BarKitchenViewModel();
-            viewModel.MenuItemType = menuItemType;
-            viewModel.PageTitle = menuItemType == MenuItemType.Food ? "Kitchen Orders" : "Bar Orders";
-            viewModel.ReturnPage = menuItemType == MenuItemType.Food ? "Kitchen" : "Bar";
-            viewModel.ViewMode = "running";
-            viewModel.IsFinishedView = false;
-            viewModel.Orders = _orderRepository.GetRunningOrders(menuItemType);
-
-            return viewModel;
+            return CreateViewModel(menuItemType, "running", false, orders);   //false=isFinishedView
         }
 
         // Get finished orders today view
         public BarKitchenViewModel GetFinishedOrdersTodayViewModel()
         {
             MenuItemType menuItemType = GetMenuItemTypeForCurrentEmployee();
+            List<Order> orders = _orderRepository.GetFinishedOrdersToday(menuItemType);
 
-            BarKitchenViewModel viewModel = new BarKitchenViewModel();
-            viewModel.MenuItemType = menuItemType;
-            viewModel.PageTitle = menuItemType == MenuItemType.Food ? "Kitchen Orders - Finished Today" : "Bar Orders - Finished Today";
-            viewModel.ReturnPage = menuItemType == MenuItemType.Food ? "Kitchen" : "Bar";
-            viewModel.ViewMode = "finished";
-            viewModel.IsFinishedView = true;
-            viewModel.Orders = _orderRepository.GetFinishedOrdersToday(menuItemType);
-
-            return viewModel;
+            return CreateViewModel(menuItemType, "finished", true, orders);  
         }
 
         // Mark order item as being prepared
-        public void MarkItemBeingPrepared(int orderItemId)
+        public bool MarkItemBeingPrepared(int orderItemId)
         {
             MenuItemType menuItemType = GetMenuItemTypeForCurrentEmployee();
 
-            _orderRepository.UpdateOrderItemStatus(
+            return _orderRepository.UpdateOrderItemStatus(
                 orderItemId,
                 menuItemType,
                 OrderItemStatus.Ordered,
@@ -96,11 +70,11 @@ namespace Chapeau_ordering_system.Services
         }
 
         // Mark order item as ready to be served
-        public void MarkItemReady(int orderItemId)
+        public bool MarkItemReady(int orderItemId)
         {
             MenuItemType menuItemType = GetMenuItemTypeForCurrentEmployee();
 
-            _orderRepository.UpdateOrderItemStatus(
+            return _orderRepository.UpdateOrderItemStatus(
                 orderItemId,
                 menuItemType,
                 OrderItemStatus.BeingPrepared,
@@ -108,11 +82,11 @@ namespace Chapeau_ordering_system.Services
         }
 
         // Mark all items in an order as being prepared
-        public void MarkOrderBeingPrepared(int orderId)
+        public bool MarkOrderBeingPrepared(int orderId)
         {
             MenuItemType menuItemType = GetMenuItemTypeForCurrentEmployee();
 
-            _orderRepository.UpdateOrderItemsStatusForOrder(
+            return _orderRepository.UpdateOrderItemsStatusForOrder(
                 orderId,
                 menuItemType,
                 OrderItemStatus.Ordered,
@@ -120,43 +94,71 @@ namespace Chapeau_ordering_system.Services
         }
 
         // Mark all items in an order as ready to be served
-        public void MarkOrderReadyToServe(int orderId)
+        public bool MarkOrderReadyToServe(int orderId)
         {
             MenuItemType menuItemType = GetMenuItemTypeForCurrentEmployee();
 
-            _orderRepository.UpdateAllOrderItemsToReady(orderId, menuItemType);
+            return _orderRepository.UpdateAllOrderItemsToReady(orderId, menuItemType);
         }
 
         // Mark all items in a course as being prepared (Kitchen only)
-        public void MarkCourseBeingPrepared(int orderId, CourseType courseType)
+        public bool MarkCourseBeingPrepared(int orderId, int courseType)
         {
             MenuItemType menuItemType = GetMenuItemTypeForCurrentEmployee();
             
-            // Only allow Kitchen to update courses
-            if (menuItemType == MenuItemType.Food)
+            // Only allow Kitchen staff to update courses
+            if (menuItemType == MenuItemType.Food && IsValidCourseType(courseType))
             {
-                _orderRepository.UpdateCourseStatus(
+                return _orderRepository.UpdateCourseStatus(
                     orderId,
-                    courseType,
+                    menuItemType,
+                    (CourseType)courseType,
                     OrderItemStatus.Ordered,
                     OrderItemStatus.BeingPrepared);
             }
+
+            return false;
         }
 
         // Mark all items in a course as ready to be served (Kitchen only)
-        public void MarkCourseReadyToServe(int orderId, CourseType courseType)
+        public bool MarkCourseReadyToServe(int orderId, int courseType)
         {
             MenuItemType menuItemType = GetMenuItemTypeForCurrentEmployee();
             
             // Only allow Kitchen to update courses
-            if (menuItemType == MenuItemType.Food)
+            if (menuItemType == MenuItemType.Food && IsValidCourseType(courseType))
             {
-                _orderRepository.UpdateCourseStatus(
+                return _orderRepository.UpdateCourseStatus(
                     orderId,
-                    courseType,
+                    menuItemType,
+                    (CourseType)courseType,
                     OrderItemStatus.BeingPrepared,
                     OrderItemStatus.ReadyToBeServed);
             }
+
+            return false;
+        }
+        private bool IsValidCourseType(int courseType)
+        {
+            return Enum.IsDefined(typeof(CourseType), courseType)
+                && (CourseType)courseType != CourseType.None;
+        }
+
+         private BarKitchenViewModel CreateViewModel(MenuItemType menuItemType,string viewMode,bool isFinishedView,List<Order> orders)
+        {
+            string pageTitle = menuItemType == MenuItemType.Food ? "Kitchen Orders" : "Bar Orders";
+
+            if (isFinishedView)
+                pageTitle += " - Finished Today";
+
+            BarKitchenViewModel viewModel = new BarKitchenViewModel();
+            viewModel.MenuItemType = menuItemType;
+            viewModel.PageTitle = pageTitle;
+            viewModel.ViewModel = viewMode;
+            viewModel.IsFinishedView = isFinishedView;
+            viewModel.Orders = orders;
+
+            return viewModel;
         }
     }
 }

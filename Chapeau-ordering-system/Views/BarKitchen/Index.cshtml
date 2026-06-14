@@ -13,7 +13,7 @@
         </div>
 
         <div class="col-md-4 text-end">
-            <a asp-controller="BarKitchen" asp-action="Index" asp-route-viewMode="@Model.ViewMode" class="btn btn-primary">
+            <a asp-controller="BarKitchen" asp-action="Index" asp-route-viewMode="@Model.ViewModel" class="btn btn-primary">
                 Refresh
             </a>
         </div>
@@ -24,11 +24,11 @@
         <div class="col-md-12">
             <div class="btn-group" role="group">
                 <a asp-controller="BarKitchen" asp-action="Index" asp-route-viewMode="running" 
-                   class="btn @(Model.ViewMode == "running" ? "btn-primary" : "btn-outline-primary")">
+                   class="btn @(Model.ViewModel == "running" ? "btn-primary" : "btn-outline-primary")">
                     Running Orders
                 </a>
                 <a asp-controller="BarKitchen" asp-action="Index" asp-route-viewMode="finished" 
-                   class="btn @(Model.ViewMode == "finished" ? "btn-primary" : "btn-outline-primary")">
+                   class="btn @(Model.ViewModel == "finished" ? "btn-primary" : "btn-outline-primary")">
                     Finished Today
                 </a>
             </div>
@@ -36,18 +36,18 @@
     </div>
 
     <!-- I show an error message if something went wrong -->
-    @if (TempData["ErrorMessage"] != null)
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
         <div class="alert alert-danger" role="alert">
-            @TempData["ErrorMessage"]
+            @Model.ErrorMessage
         </div>
     }
 
     <!-- I show a confirmation message after changing a status -->
-    @if (TempData["ConfirmMessage"] != null)
+    @if (!string.IsNullOrEmpty(Model.ConfirmMessage))
     {
         <div class="alert alert-success" role="alert">
-            @TempData["ConfirmMessage"]
+            @Model.ConfirmMessage
         </div>
     }
 

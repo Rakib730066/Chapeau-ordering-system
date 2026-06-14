@@ -12,27 +12,28 @@ namespace Chapeau_ordering_system.Repositories.Interfaces
         List<Order> GetFinishedOrdersToday(MenuItemType menuItemType);
 
         // Update all matching items in one order (used by Bar/Kitchen service)
-        void UpdateOrderItemsStatusForOrder(
+        bool UpdateOrderItemsStatusForOrder(
             int orderId,
             MenuItemType menuItemType,
             OrderItemStatus oldStatus,
             OrderItemStatus newStatus);
 
         // Update one matching order item (used by Bar/Kitchen service)
-        void UpdateOrderItemStatus(
+        bool UpdateOrderItemStatus(
             int orderItemId,
             MenuItemType menuItemType,
             OrderItemStatus oldStatus,
             OrderItemStatus newStatus);
 
         // Update all items in a course (Kitchen only, Food items)
-        void UpdateCourseStatus(
+        bool UpdateCourseStatus(
             int orderId,
+            MenuItemType menuItemType,
             CourseType courseType,
             OrderItemStatus oldStatus,
             OrderItemStatus newStatus);
 
         // Mark all items in order as ready to be served (regardless of current status)
-        void UpdateAllOrderItemsToReady(int orderId, MenuItemType menuItemType);
+        bool UpdateAllOrderItemsToReady(int orderId, MenuItemType menuItemType);
     }
 }

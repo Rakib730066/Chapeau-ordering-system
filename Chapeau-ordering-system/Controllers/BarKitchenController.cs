@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Chapeau_ordering_system.Services.Interfaces;
 using Chapeau_ordering_system.ViewModels;
-using Chapeau_ordering_system.Models.Enums;
 
 namespace Chapeau_ordering_system.Controllers
 {
@@ -14,15 +13,16 @@ namespace Chapeau_ordering_system.Controllers
             _barKitchenService = barKitchenService;
         }
 
-        // Simple session check
-        private bool IsEmployeeLoggedIn()
+        // Only Bar and Kitchen employees can access this page
+        private bool IsBarOrKitchenEmployee()
         {
-            return HttpContext.Session.GetString("EmployeeRole") != null;
+            string? role = HttpContext.Session.GetString("EmployeeRole");
+            return role == "Bar" || role == "Kitchen";
         }
 
         public IActionResult Index(string viewMode = "running")
         {
-            if (!IsEmployeeLoggedIn())
+            if (!IsBarOrKitchenEmployee())
                 return RedirectToAction("Login", "Account");
             
             BarKitchenViewModel viewModel;
@@ -34,36 +34,65 @@ namespace Chapeau_ordering_system.Controllers
             {
                 viewModel = _barKitchenService.GetRunningOrdersViewModel();
             }
+
+            viewModel.ErrorMessage = TempData["ErrorMessage"] as string;
+            viewModel.ConfirmMessage = TempData["ConfirmMessage"] as string;
+
             return View(viewModel);
         }
 
-        
+        private void SetStatusMessage(bool isSuccessful, string confirmMessage, string errorMessage)
+        {
+            if (isSuccessful)
+                TempData["ConfirmMessage"] = confirmMessage;
+            else
+                TempData["ErrorMessage"] = errorMessage;
+        }
+
+        // POST: Mark one order item as being prepared
         [HttpPost]
         public IActionResult StartItem(int orderItemId)
         {
-            if (!IsEmployeeLoggedIn())
+            if (!IsBarOrKitchenEmployee())
                 return RedirectToAction("Login", "Account");
-            _barKitchenService.MarkItemBeingPrepared(orderItemId);
+
+            bool isSuccessful = _barKitchenService.MarkItemBeingPrepared(orderItemId);
+            SetStatusMessage(
+                isSuccessful,
+                "Order item started successfully.",
+                "Could not start the order item. It may already be in progress, ready, or unavailable.");
+
             return RedirectToAction("Index", new { viewMode = "running" });
         }
 
-        
+        // POST: Mark order item as ready to be served
         [HttpPost]
         public IActionResult MarkItemReady(int orderItemId)
         {
-            if (!IsEmployeeLoggedIn())
+            if (!IsBarOrKitchenEmployee())
                 return RedirectToAction("Login", "Account");
 
-            _barKitchenService.MarkItemReady(orderItemId);
+            bool isSuccessful = _barKitchenService.MarkItemReady(orderItemId);
+            SetStatusMessage(
+                isSuccessful,
+                "Order item marked as ready.",
+                "Could not mark the order item as ready. It may not be in preparation or may be unavailable.");
+
             return RedirectToAction("Index", new { viewMode = "running" });
         }
-
+        // POST: Mark ALL items in order as being prepared
         [HttpPost]
         public IActionResult StartOrder(int orderId)
         {
-            if (!IsEmployeeLoggedIn())
+            if (!IsBarOrKitchenEmployee())
                 return RedirectToAction("Login", "Account");
-            _barKitchenService.MarkOrderBeingPrepared(orderId);
+
+            bool isSuccessful = _barKitchenService.MarkOrderBeingPrepared(orderId);
+            SetStatusMessage(
+                isSuccessful,
+                "Order started successfully.",
+                "Could not start the order. There may be no ordered items to start.");
+
             return RedirectToAction("Index", new { viewMode = "running" });
         }
 
@@ -71,10 +100,15 @@ namespace Chapeau_ordering_system.Controllers
         [HttpPost]
         public IActionResult MarkOrderReady(int orderId)
         {
-            if (!IsEmployeeLoggedIn())
+            if (!IsBarOrKitchenEmployee())
                 return RedirectToAction("Login", "Account");
 
-            _barKitchenService.MarkOrderReadyToServe(orderId);
+            bool isSuccessful = _barKitchenService.MarkOrderReadyToServe(orderId);
+            SetStatusMessage(
+                isSuccessful,
+                "Order marked as ready.",
+                "Could not mark the order as ready. There may be no items that can be updated.");
+
             return RedirectToAction("Index", new { viewMode = "finished" });
         }
 
@@ -82,13 +116,15 @@ namespace Chapeau_ordering_system.Controllers
         [HttpPost]
         public IActionResult StartCourse(int orderId, int courseType)
         {
-            if (!IsEmployeeLoggedIn())
+            if (!IsBarOrKitchenEmployee())
                 return RedirectToAction("Login", "Account");
 
-            if (Enum.TryParse<CourseType>(courseType.ToString(), out var course))
-            {
-                _barKitchenService.MarkCourseBeingPrepared(orderId, course);
-            }
+            bool isSuccessful = _barKitchenService.MarkCourseBeingPrepared(orderId, courseType);
+            SetStatusMessage(
+                isSuccessful,
+                "Course started successfully.",
+                "Could not start the course. It may be invalid, already started, or unavailable.");
+
             return RedirectToAction("Index", new { viewMode = "running" });
         }
 
@@ -96,13 +132,15 @@ namespace Chapeau_ordering_system.Controllers
         [HttpPost]
         public IActionResult MarkCourseReady(int orderId, int courseType)
         {
-            if (!IsEmployeeLoggedIn())
+            if (!IsBarOrKitchenEmployee())
                 return RedirectToAction("Login", "Account");
 
-            if (Enum.TryParse<CourseType>(courseType.ToString(), out var course))
-            {
-                _barKitchenService.MarkCourseReadyToServe(orderId, course);
-            }
+            bool isSuccessful = _barKitchenService.MarkCourseReadyToServe(orderId, courseType);
+            SetStatusMessage(
+                isSuccessful,
+                "Course marked as ready.",
+                "Could not mark the course as ready. It may not be in preparation or may be unavailable.");
+
             return RedirectToAction("Index", new { viewMode = "running" });
         }
     }

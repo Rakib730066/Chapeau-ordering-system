@@ -66,19 +66,13 @@ namespace Chapeau_ordering_system.Repositories
         }
 
         // Get running orders (filtered by Bar or Kitchen using MenuItemType)
-       public List<Order> GetRunningOrders(MenuItemType menuItemType)
-{
-    // Validate MenuItemType parameter
-    if (menuItemType != MenuItemType.Food && menuItemType != MenuItemType.Drink)
-    {
-        throw new ArgumentException($"Invalid menu item type: {menuItemType}");
-    }
+        public List<Order> GetRunningOrders(MenuItemType menuItemType)
+        {
+            Dictionary<int, Order> orders = new Dictionary<int, Order>();
 
-    Dictionary<int, Order> orders = new Dictionary<int, Order>();
-
-    try
-    {
-        string query = @"
+            try
+            {
+                string query = @"
             SELECT 
                 o.OrderId, o.TableId, t.TableNumber, o.EmployeeId,
                 e.FirstName, e.LastName, e.Role, o.OrderTime, o.Status,
@@ -94,52 +88,48 @@ namespace Chapeau_ordering_system.Repositories
             AND oi.Status IN (@OrderedStatus, @BeingPreparedStatus) -- recommendation
             ORDER BY o.OrderTime ASC";
 
-        using (SqlConnection connection = new SqlConnection(_connectionString))
-        using (SqlCommand command = new SqlCommand(query, connection))
-        {
-            command.Parameters.AddWithValue("@MenuItemType", (int)menuItemType);
-            command.Parameters.AddWithValue("@OrderedStatus", (int)OrderItemStatus.Ordered);
-            command.Parameters.AddWithValue("@BeingPreparedStatus", (int)OrderItemStatus.BeingPrepared);
-
-            connection.Open();
-
-            using (SqlDataReader reader = command.ExecuteReader())
-            {
-                while (reader.Read())
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                using (SqlCommand command = new SqlCommand(query, connection))
                 {
-                    int orderId = (int)reader["OrderId"];
+                    command.Parameters.AddWithValue("@MenuItemType", (int)menuItemType);
+                    command.Parameters.AddWithValue("@OrderedStatus", (int)OrderItemStatus.Ordered);
+                    command.Parameters.AddWithValue("@BeingPreparedStatus", (int)OrderItemStatus.BeingPrepared);
 
-                    if (!orders.ContainsKey(orderId))
+                    connection.Open();
+
+                    using (SqlDataReader reader = command.ExecuteReader())
                     {
-                        Order order = MapOrder(reader);
-                        order.Table = MapRestaurantTable(reader);
-                        order.Employee = MapEmployee(reader);
-                        order.OrderItems = new List<OrderItem>();
+                        while (reader.Read())
+                        {
+                            int orderId = (int)reader["OrderId"];
 
-                        orders.Add(orderId, order);
+                            if (!orders.ContainsKey(orderId))
+                            {
+                                Order order = MapOrder(reader);
+                                order.Table = MapRestaurantTable(reader);
+                                order.Employee = MapEmployee(reader);
+                                order.OrderItems = new List<OrderItem>();
+
+                                orders.Add(orderId, order);
+                            }
+
+                            OrderItem orderItem = MapOrderItem(reader);
+                            orders[orderId].OrderItems.Add(orderItem);
+                        }
                     }
-
-                    OrderItem orderItem = MapOrderItem(reader);
-                    orders[orderId].OrderItems.Add(orderItem);
                 }
             }
-        }
-    }
-    catch (SqlException ex)
-    {
-        throw new Exception("Error fetching running orders.", ex);
-    }
+            catch (SqlException ex)
+            {
+                throw new Exception("Error fetching running orders.", ex);
+            }
 
-    return orders.Values.ToList();
-}
+            return orders.Values.ToList();
+        }
 
         // Get finished orders today (filtered by Bar or Kitchen using MenuItemType)
         public List<Order> GetFinishedOrdersToday(MenuItemType menuItemType)
         {
-            // Validate MenuItemType parameter
-            if (menuItemType != MenuItemType.Food && menuItemType != MenuItemType.Drink)
-                throw new ArgumentException($"Invalid menu item type: {menuItemType}");
-
             Dictionary<int, Order> orders = new Dictionary<int, Order>();
             try
             {
@@ -157,6 +147,7 @@ namespace Chapeau_ordering_system.Repositories
                     INNER JOIN Employees e ON o.EmployeeId = e.EmployeeId
                     WHERE mi.Type = @MenuItemType
                     AND oi.Status IN (@ReadyToBeServedStatus, @ServedStatus)  -- recommendation
+                    AND CAST(o.OrderTime AS DATE) = CAST(GETDATE() AS DATE)
                     ORDER BY o.OrderTime ASC";
 
                 using (SqlConnection connection = new SqlConnection(_connectionString))
@@ -193,8 +184,8 @@ namespace Chapeau_ordering_system.Repositories
             return orders.Values.ToList();
         }
 
-        // Update all items in order with specific status (Bar/Kitchen complex method)
-        public void UpdateOrderItemsStatusForOrder(int orderId, MenuItemType menuItemType, OrderItemStatus oldStatus, OrderItemStatus newStatus)
+        // Update all items in order with specific status 
+        public bool UpdateOrderItemsStatusForOrder(int orderId, MenuItemType menuItemType, OrderItemStatus oldStatus, OrderItemStatus newStatus)
         {
             try
             {
@@ -209,7 +200,7 @@ namespace Chapeau_ordering_system.Repositories
                     command.Parameters.AddWithValue("@OrderId", orderId);
 
                     connection.Open();
-                    command.ExecuteNonQuery();
+                    return command.ExecuteNonQuery() > 0;
                 }
             }
             catch (SqlException ex)
@@ -219,12 +210,8 @@ namespace Chapeau_ordering_system.Repositories
         }
 
         // Update single item with role filtering (Bar/Kitchen complex method)
-        public void UpdateOrderItemStatus(int orderItemId, MenuItemType menuItemType, OrderItemStatus oldStatus, OrderItemStatus newStatus)
+        public bool UpdateOrderItemStatus(int orderItemId, MenuItemType menuItemType, OrderItemStatus oldStatus, OrderItemStatus newStatus)
         {
-            // Validate MenuItemType parameter
-            if (menuItemType != MenuItemType.Food && menuItemType != MenuItemType.Drink)
-                throw new ArgumentException($"Invalid menu item type: {menuItemType}");
-
             try
             {
                 using (SqlConnection connection = new SqlConnection(_connectionString))
@@ -238,7 +225,7 @@ namespace Chapeau_ordering_system.Repositories
                     command.Parameters.AddWithValue("@OrderItemId", orderItemId);
 
                     connection.Open();
-                    command.ExecuteNonQuery();
+                    return command.ExecuteNonQuery() > 0;
                 }
             }
             catch (SqlException ex)
@@ -248,22 +235,23 @@ namespace Chapeau_ordering_system.Repositories
         }
 
         // Update all items in a course (Kitchen only, Food items)
-        public void UpdateCourseStatus(int orderId, CourseType courseType, OrderItemStatus oldStatus, OrderItemStatus newStatus)
+        public bool UpdateCourseStatus(int orderId, MenuItemType menuItemType, CourseType courseType, OrderItemStatus oldStatus, OrderItemStatus newStatus)
         {
             try
             {
                 using (SqlConnection connection = new SqlConnection(_connectionString))
                 using (SqlCommand command = new SqlCommand(
-                    "UPDATE OrderItems SET Status = @NewStatus WHERE OrderId = @OrderId AND Status = @OldStatus AND MenuItemId IN (SELECT MenuItemId FROM MenuItems WHERE Type = 1 AND Course = @Course)",
+                    "UPDATE OrderItems SET Status = @NewStatus WHERE OrderId = @OrderId AND Status = @OldStatus AND MenuItemId IN (SELECT MenuItemId FROM MenuItems WHERE Type = @MenuItemType AND Course = @Course)",
                     connection))
                 {
                     command.Parameters.AddWithValue("@NewStatus", (int)newStatus);
                     command.Parameters.AddWithValue("@OldStatus", (int)oldStatus);
+                    command.Parameters.AddWithValue("@MenuItemType", (int)menuItemType);
                     command.Parameters.AddWithValue("@Course", (int)courseType);
                     command.Parameters.AddWithValue("@OrderId", orderId);
 
                     connection.Open();
-                    command.ExecuteNonQuery();
+                    return command.ExecuteNonQuery() > 0;
                 }
             }
             catch (SqlException ex)
@@ -273,21 +261,23 @@ namespace Chapeau_ordering_system.Repositories
         }
 
         // Mark all items in order as ready to be served (regardless of current status)
-        public void UpdateAllOrderItemsToReady(int orderId, MenuItemType menuItemType)
+        public bool UpdateAllOrderItemsToReady(int orderId, MenuItemType menuItemType)
         {
             try
             {
                 using (SqlConnection connection = new SqlConnection(_connectionString))
                 using (SqlCommand command = new SqlCommand(
-                    "UPDATE OrderItems SET Status = @ReadyStatus WHERE OrderId = @OrderId AND Status IN (1, 2) AND MenuItemId IN (SELECT MenuItemId FROM MenuItems WHERE Type = @MenuItemType)",
+                    "UPDATE OrderItems SET Status = @ReadyStatus WHERE OrderId = @OrderId AND Status IN (@OrderedStatus, @BeingPreparedStatus) AND MenuItemId IN (SELECT MenuItemId FROM MenuItems WHERE Type = @MenuItemType)",
                     connection))
                 {
                     command.Parameters.AddWithValue("@ReadyStatus", (int)OrderItemStatus.ReadyToBeServed);
+                    command.Parameters.AddWithValue("@OrderedStatus", (int)OrderItemStatus.Ordered);
+                    command.Parameters.AddWithValue("@BeingPreparedStatus", (int)OrderItemStatus.BeingPrepared);
                     command.Parameters.AddWithValue("@MenuItemType", (int)menuItemType);
                     command.Parameters.AddWithValue("@OrderId", orderId);
 
                     connection.Open();
-                    command.ExecuteNonQuery();
+                    return command.ExecuteNonQuery() > 0;
                 }
             }
             catch (SqlException ex)
