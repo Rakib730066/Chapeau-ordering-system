@@ -14,6 +14,22 @@
         </a>
     </div>
 
+    @if (TempData["ErrorMessage"] is string errorMsg)
+    {
+        <div class="alert alert-danger">@errorMsg</div>
+    }
+
+    <div class="d-flex gap-2 mb-4">
+        <form asp-controller="Order" asp-action="StartOrder" method="post">
+            <input type="hidden" name="tableId" value="@Model.TableId" />
+            <button type="submit" class="btn btn-primary">Start Order</button>
+        </form>
+        <form asp-controller="Order" asp-action="LoadOrder" method="post">
+            <input type="hidden" name="tableId" value="@Model.TableId" />
+            <button type="submit" class="btn btn-outline-warning">Load Existing Order</button>
+        </form>
+    </div>
+
     @* ── Card type filter buttons (All / Food / Drinks) ── *@
     <div class="mb-3">
         <span class="fw-semibold me-2">Card:</span>

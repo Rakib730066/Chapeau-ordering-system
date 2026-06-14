@@ -26,6 +26,9 @@
         OrderItemStatus.Served => "bg-secondary",
         _ => "bg-secondary"
     };
+    static string TypeBadgeClass(MenuItemType type) => type == MenuItemType.Drink
+        ? "bg-info text-dark"
+        : "bg-success";
 }
 <div class="container mt-4">
     @if (TempData["Error"] != null)
@@ -73,7 +76,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center py-2">
                     <strong>Table @t.TableNumber</strong>
                     <a asp-controller="Order" asp-action="Menu" asp-route-tableId="@t.TableId"
-                       class="btn btn-sm btn-primary ms-2">Take Order</a>
+                       class="btn btn-sm btn-primary ms-2">Menu</a>
                     <span class="badge @BadgeClass(t.Status)">@t.Status</span>
                 </div>
                 <div class="card-body p-2">
@@ -90,7 +93,13 @@
                             @foreach (var item in order.OrderItems)
                             {
                               <div class="d-flex justify-content-between align-items-center py-1">
-    <span class="small">@item.Quantity&times; @item.MenuItem?.Name</span>
+    <span class="small">
+        @item.Quantity&times; @item.MenuItem?.Name
+        @if (item.MenuItem != null)
+        {
+            <span class="badge @TypeBadgeClass(item.MenuItem.Type) ms-1" style="font-size:0.65rem;">@item.MenuItem.Type</span>
+        }
+    </span>
     <div class="d-flex align-items-center gap-1">
         <span class="badge @ItemBadgeClass(item.Status)">@item.Status</span>
         @if (item.Status == OrderItemStatus.ReadyToBeServed)
