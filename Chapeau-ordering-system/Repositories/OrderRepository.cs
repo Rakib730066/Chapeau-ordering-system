@@ -36,7 +36,7 @@ namespace Chapeau_ordering_system.Repositories
                 INNER JOIN dbo.Employees e  ON e.EmployeeId = o.EmployeeId
                 LEFT  JOIN dbo.OrderItems oi ON oi.OrderId   = o.OrderId
                 LEFT  JOIN dbo.MenuItems  mi ON mi.MenuItemId = oi.MenuItemId
-                WHERE o.Status = 1
+                WHERE o.Status IN (1, 2)
                 ORDER BY o.OrderId, oi.OrderItemId";
 
             try
