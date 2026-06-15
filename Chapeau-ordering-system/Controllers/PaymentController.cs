@@ -23,7 +23,7 @@ namespace Chapeau_ordering_system.Controllers
             var model = _paymentService.GetOrderForPayment(tableId);
             if (model == null)
             {
-                TempData["Message"] = $"No open order found for table {tableId}.";
+                TempData["ErrorMessage"] = $"No open order found for table {tableId}.";
                 return RedirectToAction("Index", "RestaurantOverview");
             }
 
@@ -39,7 +39,7 @@ namespace Chapeau_ordering_system.Controllers
             var model = _paymentService.GetFinishOrderViewModel(tableId);
             if (model == null)
             {
-                TempData["Message"] = $"No open order found for table {tableId}.";
+                TempData["ErrorMessage"] = $"No open order found for table {tableId}.";
                 return RedirectToAction("Index", "RestaurantOverview");
             }
 
@@ -72,8 +72,8 @@ namespace Chapeau_ordering_system.Controllers
             }
             catch (Exception ex)
             {
-                TempData["Message"] = $"Could not finish the order: {ex.Message}";
-                return RedirectToAction("ViewOrder", new { tableId = input.TableId });
+                TempData["ErrorMessage"] = $"Could not finish the order: {ex.Message}";
+                return RedirectToAction("Index", "RestaurantOverview");
             }
 
             TempData["ConfirmationMessage"] =
@@ -90,7 +90,7 @@ namespace Chapeau_ordering_system.Controllers
             var model = _paymentService.GetSplitPaymentViewModel(tableId);
             if (model == null)
             {
-                TempData["Message"] = $"No open order found for table {tableId}.";
+                TempData["ErrorMessage"] = $"No open order found for table {tableId}.";
                 return RedirectToAction("Index", "RestaurantOverview");
             }
 
@@ -107,7 +107,7 @@ namespace Chapeau_ordering_system.Controllers
             var refreshed = _paymentService.GetSplitPaymentViewModel(input.TableId);
             if (refreshed == null)
             {
-                TempData["Message"] = $"No open order found for table {input.TableId}.";
+                TempData["ErrorMessage"] = $"No open order found for table {input.TableId}.";
                 return RedirectToAction("Index", "RestaurantOverview");
             }
 
@@ -115,26 +115,15 @@ namespace Chapeau_ordering_system.Controllers
             refreshed.NumberOfPeople = input.NumberOfPeople;
             refreshed.Payments = input.Payments ?? new List<PersonPaymentViewModel>();
 
-            string? actionType = Request.Form["action"];
-            bool isRecalc = actionType == "recalc";
+
+            // Rebuild rows when the people count changes.
+            bool isRecalc = Request.Form["action"] == "recalc";
             bool peopleCountMismatch = refreshed.Mode == SplitMode.Equal
                                        && refreshed.Payments.Count != refreshed.NumberOfPeople;
 
             if (isRecalc || peopleCountMismatch)
             {
-                if (refreshed.Mode == SplitMode.Equal && refreshed.NumberOfPeople >= 2)
-                {
-                    decimal share = Math.Round(refreshed.TotalToPay / refreshed.NumberOfPeople, 2);
-                    refreshed.Payments = new List<PersonPaymentViewModel>();
-                    for (int i = 0; i < refreshed.NumberOfPeople; i++)
-                    {
-                        refreshed.Payments.Add(new PersonPaymentViewModel
-                        {
-                            AmountPaid = share,
-                            PaymentMethod = PaymentMethod.Cash
-                        });
-                    }
-                }
+                refreshed = _paymentService.RebuildEqualSplit(refreshed);
                 ModelState.Clear();
                 return View(refreshed);
             }

@@ -8,9 +8,9 @@
 
         public List<OrderLineViewModel> Lines { get; set; } = new List<OrderLineViewModel>();
 
-        public decimal VatLow { get; set; }        // 9% VAT portion
-        public decimal VatHigh { get; set; }       // 21% VAT portion
-        public decimal TotalInclVat { get; set; }  // amount to be paid (menu prices are VAT-inclusive)
+        public decimal VatLow { get; set; }       
+        public decimal VatHigh { get; set; }       
+        public decimal TotalInclVat { get; set; }  
     }
 
     public class OrderLineViewModel

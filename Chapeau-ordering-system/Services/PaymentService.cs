@@ -8,6 +8,8 @@ namespace Chapeau_ordering_system.Services
 {
     public class PaymentService : IPaymentService
     {
+        private const int DefaultNumberOfPeople = 2;
+
         private readonly IPaymentRepository _paymentRepository;
 
         public PaymentService(IPaymentRepository paymentRepository)
@@ -49,14 +51,13 @@ namespace Chapeau_ordering_system.Services
 
             OrderPaymentViewModel summary = BuildViewModel(order);
 
-            decimal tip = input.AmountPaid - summary.TotalInclVat;
-            if (tip < 0m) tip = 0m;
+            decimal tip = CalculateTip(input, summary.TotalInclVat);
 
             Payment payment = new Payment
             {
                 OrderId = summary.OrderId,
                 Amount = summary.TotalInclVat,
-                TipAmount = Math.Round(tip, 2),
+                TipAmount = tip,
                 VatLowAmount = summary.VatLow,
                 VatHighAmount = summary.VatHigh,
                 PaymentMethod = input.PaymentMethod,
@@ -74,7 +75,6 @@ namespace Chapeau_ordering_system.Services
 
             OrderPaymentViewModel summary = BuildViewModel(order);
 
-            // Pre-fill 2 rows for default equal split (2 people)
             var viewModel = new SplitPaymentViewModel
             {
                 OrderId = summary.OrderId,
@@ -84,20 +84,21 @@ namespace Chapeau_ordering_system.Services
                 VatLow = summary.VatLow,
                 VatHigh = summary.VatHigh,
                 Mode = SplitMode.Equal,
-                NumberOfPeople = 2
+                NumberOfPeople = DefaultNumberOfPeople
             };
 
-            decimal share = Math.Round(summary.TotalInclVat / 2m, 2);
-            for (int i = 0; i < 2; i++)
+            viewModel.Payments = BuildEqualSplitRows(viewModel.TotalToPay, DefaultNumberOfPeople);
+            return viewModel;
+        }
+
+        public SplitPaymentViewModel RebuildEqualSplit(SplitPaymentViewModel input)
+        {
+            if (input.Mode == SplitMode.Equal && input.NumberOfPeople >= DefaultNumberOfPeople)
             {
-                viewModel.Payments.Add(new PersonPaymentViewModel
-                {
-                    AmountPaid = share,
-                    PaymentMethod = PaymentMethod.Cash
-                });
+                input.Payments = BuildEqualSplitRows(input.TotalToPay, input.NumberOfPeople);
             }
 
-            return viewModel;
+            return input;
         }
 
         public (bool success, string? errorMessage) FinishSplitOrder(SplitPaymentViewModel input)
@@ -108,11 +109,9 @@ namespace Chapeau_ordering_system.Services
 
             OrderPaymentViewModel summary = BuildViewModel(order);
 
-            // Validate: must have at least 1 payment row
             if (input.Payments == null || input.Payments.Count == 0)
                 return (false, "At least one payment is required.");
 
-            // Validate: sum of all payments must be at least the bill total
             decimal sumPaid = input.Payments.Sum(p => p.AmountPaid);
             if (sumPaid < summary.TotalInclVat)
             {
@@ -121,14 +120,10 @@ namespace Chapeau_ordering_system.Services
                                $"Remaining to pay: €{remaining:0.00}");
             }
 
-            // Build per-person Payment rows.
-            // For VAT allocation, each person gets a proportional share of the bill's VAT
-            // (based on what fraction of the bill they paid).
             List<Payment> payments = new List<Payment>();
 
             foreach (var person in input.Payments)
             {
-                // What fraction of the bill total did this person cover?
                 decimal billShare = person.AmountPaid > summary.TotalInclVat
                     ? summary.TotalInclVat
                     : person.AmountPaid;
@@ -159,7 +154,41 @@ namespace Chapeau_ordering_system.Services
             return (true, null);
         }
 
-        // --- private helper ---
+
+        // --- private helpers ---
+
+       
+        private decimal CalculateTip(FinishOrderViewModel input, decimal billTotal)
+        {
+            decimal tip;
+
+            if (input.TipAmount > 0m)
+                tip = input.TipAmount;
+            else
+                tip = input.AmountPaid - billTotal;
+
+            if (tip < 0m) tip = 0m;
+
+            return Math.Round(tip, 2);
+        }
+
+        private List<PersonPaymentViewModel> BuildEqualSplitRows(decimal total, int numberOfPeople)
+        {
+            decimal share = Math.Round(total / numberOfPeople, 2);
+
+            List<PersonPaymentViewModel> rows = new List<PersonPaymentViewModel>();
+            for (int i = 0; i < numberOfPeople; i++)
+            {
+                rows.Add(new PersonPaymentViewModel
+                {
+                    AmountPaid = share,
+                    PaymentMethod = PaymentMethod.Cash
+                });
+            }
+
+            return rows;
+        }
+
         private OrderPaymentViewModel BuildViewModel(Order order)
         {
             var vm = new OrderPaymentViewModel

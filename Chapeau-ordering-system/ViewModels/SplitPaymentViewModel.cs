@@ -19,15 +19,10 @@ namespace Chapeau_ordering_system.ViewModels
         public decimal TotalToPay { get; set; }
         public decimal VatLow { get; set; }
         public decimal VatHigh { get; set; }
-
-        // Mode toggle
         public SplitMode Mode { get; set; } = SplitMode.Equal;
 
-        // For EQUAL split: number of people
         [Range(2, 20, ErrorMessage = "Number of people must be between 2 and 20.")]
         public int NumberOfPeople { get; set; } = 2;
-
-        // List of individual payments (length = NumberOfPeople, or 1+ rows in Custom mode)
         public List<PersonPaymentViewModel> Payments { get; set; } = new List<PersonPaymentViewModel>();
     }
 
