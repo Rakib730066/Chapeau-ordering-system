@@ -572,8 +572,8 @@ namespace Chapeau_ordering_system.Repositories
                 FROM dbo.OrderItems oi
                 INNER JOIN dbo.Orders o ON o.OrderId = oi.OrderId
                 WHERE o.TableId = @TableId
-                  AND o.Status  = 1
-                  AND oi.Status NOT IN (4, 5)";
+                  AND o.Status  = 1 //open orders only
+                  AND oi.Status NOT IN (4, 5)";// served, cancelled
 
             using var conn = new SqlConnection(_connectionString);
             using var cmd = new SqlCommand(query, conn);

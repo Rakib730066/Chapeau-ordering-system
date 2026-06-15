@@ -20,7 +20,7 @@ namespace Chapeau_ordering_system.Services
 
         public IEnumerable<Order> GetOpenOrders()
         {
-            return _orderRepository.GetOpenOrders();
+            return _orderRepository.GetOpenOrders(); 
         }
 
         public int StartOrder(int tableId, int employeeId)
