@@ -572,7 +572,7 @@ namespace Chapeau_ordering_system.Repositories
                 FROM dbo.OrderItems oi
                 INNER JOIN dbo.Orders o ON o.OrderId = oi.OrderId
                 WHERE o.TableId = @TableId
-                  AND o.Status  = 1 //open orders only
+                  AND o.Status  = 1
                   AND oi.Status NOT IN (4, 5)";// served, cancelled
 
             using var conn = new SqlConnection(_connectionString);
@@ -581,7 +581,7 @@ namespace Chapeau_ordering_system.Repositories
             cmd.Parameters.AddWithValue("@TableId", tableId);
 
             conn.Open();
-            return (int)cmd.ExecuteScalar() > 0;
+            return (int)cmd.ExecuteScalar() > 0;// checks if there is any data in datbase and brings one
         }
 
         private static OrderItem MapOrderItemWithMenuItem(SqlDataReader reader)
