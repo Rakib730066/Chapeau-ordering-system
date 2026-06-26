@@ -31,16 +31,35 @@
                    class="btn btn-outline-secondary btn-sm">&larr; Back</a>
             </div>
 
-            @* Card filter *@
+            @* Type filter (Food / Drinks) *@
             <div class="mb-2">
                 <a asp-action="TakeOrder" asp-route-tableId="@Model.Menu.TableId"
+                   asp-route-card="@((int?)Model.Menu.ActiveCard)"
                    class="btn btn-sm @(Model.Menu.ActiveType == null ? "btn-dark" : "btn-outline-dark") me-1">All</a>
                 <a asp-action="TakeOrder" asp-route-tableId="@Model.Menu.TableId"
                    asp-route-type="@((int)MenuItemType.Food)"
+                   asp-route-card="@((int?)Model.Menu.ActiveCard)"
                    class="btn btn-sm @(Model.Menu.ActiveType == MenuItemType.Food ? "btn-dark" : "btn-outline-dark") me-1">Food</a>
                 <a asp-action="TakeOrder" asp-route-tableId="@Model.Menu.TableId"
                    asp-route-type="@((int)MenuItemType.Drink)"
+                   asp-route-card="@((int?)Model.Menu.ActiveCard)"
                    class="btn btn-sm @(Model.Menu.ActiveType == MenuItemType.Drink ? "btn-dark" : "btn-outline-dark") me-1">Drinks</a>
+            </div>
+
+            @* Card filter *@
+            <div class="mb-2">
+                <a asp-action="TakeOrder" asp-route-tableId="@Model.Menu.TableId"
+                   asp-route-type="@((int?)Model.Menu.ActiveType)"
+                   asp-route-course="@((int?)Model.Menu.ActiveCourse)"
+                   class="btn btn-sm @(Model.Menu.ActiveCard == null ? "btn-dark" : "btn-outline-dark") me-1">All Cards</a>
+                @foreach (CardType cardType in Enum.GetValues<CardType>())
+                {
+                    <a asp-action="TakeOrder" asp-route-tableId="@Model.Menu.TableId"
+                       asp-route-type="@((int?)Model.Menu.ActiveType)"
+                       asp-route-course="@((int?)Model.Menu.ActiveCourse)"
+                       asp-route-card="@((int)cardType)"
+                       class="btn btn-sm @(Model.Menu.ActiveCard == cardType ? "btn-dark" : "btn-outline-dark") me-1">@cardType</a>
+                }
             </div>
 
             @* Course filter *@
@@ -125,6 +144,7 @@
                                                         <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
                                                         <input type="hidden" name="type" value="@((int?)Model.Menu.ActiveType)" />
                                                         <input type="hidden" name="course" value="@((int?)Model.Menu.ActiveCourse)" />
+                                                        <input type="hidden" name="card" value="@((int?)Model.Menu.ActiveCard)" />
                                                         <button type="submit" class="btn btn-sm btn-primary">+ Add</button>
                                                     </form>
                                                 }
