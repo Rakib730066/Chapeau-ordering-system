@@ -10,7 +10,7 @@ namespace Chapeau_ordering_system.Services.Interfaces
 
         void AddItemToOrder(int orderId, int menuItemId);
 
-        void SaveOrder(int orderId, List<OrderItem> items);
+        void SaveOrder(int orderId);
 
         void IncreaseItemQuantity(int orderItemId, int currentQuantity);
 
