@@ -1,0 +1,134 @@
+@model List<Chapeau_ordering_system.Models.MenuItem>
+@using Chapeau_ordering_system.Models.Enums
+@{
+    ViewData["Title"] = "Manage Menu Items";
+    var filterType = ViewBag.FilterType as MenuItemType?;
+    var filterCard = ViewBag.FilterCard as CardType?;
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold mb-0">Menu Items</h4>
+        <a asp-action="CreateMenuItem" class="btn btn-primary btn-sm">+ Add Item</a>
+    </div>
+
+    @if (TempData["ConfirmMessage"] is string ok)
+    {
+        <div class="alert alert-success alert-dismissible fade show">@ok <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    }
+    @if (TempData["ErrorMessage"] is string err)
+    {
+        <div class="alert alert-danger">@err</div>
+    }
+
+    <!-- Filters -->
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-auto">
+            <select name="type" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">All Types</option>
+                @foreach (MenuItemType t in Enum.GetValues(typeof(MenuItemType)))
+                {
+                    if (filterType == t)
+                    {
+                        <option value="@((int)t)" selected>@t</option>
+                    }
+                    else
+                    {
+                        <option value="@((int)t)">@t</option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="col-auto">
+            <select name="card" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">All Cards</option>
+                @foreach (CardType c in Enum.GetValues(typeof(CardType)))
+                {
+                    if (filterCard == c)
+                    {
+                        <option value="@((int)c)" selected>@c</option>
+                    }
+                    else
+                    {
+                        <option value="@((int)c)">@c</option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="col-auto">
+            <a asp-action="MenuItems" class="btn btn-outline-secondary btn-sm">Clear</a>
+        </div>
+    </form>
+
+    <table class="table table-sm table-hover align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>Name</th>
+                <th>Card</th>
+                <th>Type</th>
+                <th>Course</th>
+                <th>Price</th>
+                <th>VAT</th>
+                <th>Stock</th>
+                <th>Status</th>
+                <th style="width:220px">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.OrderBy(i => i.Card).ThenBy(i => i.Course).ThenBy(i => i.Name))
+            {
+                <tr class="@(!item.IsActive ? "table-secondary text-muted" : item.IsOutOfStock ? "table-danger" : item.IsLowStock ? "table-warning" : "")">
+                    <td>@item.Name</td>
+                    <td>@item.Card</td>
+                    <td>@item.Type</td>
+                    <td>@item.Course</td>
+                    <td>€@item.Price.ToString("F2")</td>
+                    <td>@((item.VatRate * 100).ToString("0"))%</td>
+                    <td>
+                        <!-- inline stock edit -->
+                        <form asp-action="UpdateStock" method="post" class="d-flex gap-1" style="min-width:100px">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@item.MenuItemId" />
+                            <input type="number" name="newStock" value="@item.Stock" min="0" class="form-control form-control-sm" style="width:65px" />
+                            <button type="submit" class="btn btn-outline-primary btn-sm">✓</button>
+                        </form>
+                    </td>
+                    <td>
+                        @if (!item.IsActive)
+                        {
+                            <span class="badge bg-secondary">Inactive</span>
+                        }
+                        else if (item.IsOutOfStock)
+                        {
+                            <span class="badge bg-danger">Out of Stock</span>
+                        }
+                        else if (item.IsLowStock)
+                        {
+                            <span class="badge bg-warning text-dark">Low Stock</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-success">Active</span>
+                        }
+                    </td>
+                    <td>
+                        <div class="d-flex gap-1 flex-wrap">
+                            <a asp-action="EditMenuItem" asp-route-id="@item.MenuItemId"
+                               class="btn btn-outline-secondary btn-sm">Edit</a>
+
+                            <form asp-action="ToggleMenuItemActive" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@item.MenuItemId" />
+                                <input type="hidden" name="isActive" value="@(!item.IsActive)" />
+                                <button type="submit"
+                                        class="btn btn-sm @(item.IsActive ? "btn-outline-danger" : "btn-outline-success")">
+                                    @(item.IsActive ? "Deactivate" : "Activate")
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

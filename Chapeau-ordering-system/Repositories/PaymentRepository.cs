@@ -1,6 +1,7 @@
-﻿using Chapeau_ordering_system.Models;
+using Chapeau_ordering_system.Models;
 using Chapeau_ordering_system.Models.Enums;
 using Chapeau_ordering_system.Repositories.Interfaces;
+using Chapeau_ordering_system.ViewModels;
 using Microsoft.Data.SqlClient;
 
 namespace Chapeau_ordering_system.Repositories
@@ -100,7 +101,6 @@ namespace Chapeau_ordering_system.Repositories
             return order;
         }
 
-  
         public void FinishOrder(Payment payment)
         {
             using SqlConnection conn = new SqlConnection(_connectionString);
@@ -157,7 +157,6 @@ namespace Chapeau_ordering_system.Repositories
             }
         }
 
-   
         public void FinishOrderWithSplit(List<Payment> payments)
         {
             if (payments == null || payments.Count == 0)
@@ -220,6 +219,77 @@ namespace Chapeau_ordering_system.Repositories
                 transaction.Rollback();
                 throw;
             }
+        }
+
+        public FinancialOverviewViewModel GetFinancialOverview(DateTime startDate, DateTime endDate)
+        {
+            var vm = new FinancialOverviewViewModel
+            {
+                StartDate = startDate,
+                EndDate = endDate
+            };
+
+            string query = @"
+                SELECT
+                    CAST(p.PaidAt AS DATE)         AS PayDate,
+                    SUM(p.Amount)                  AS TotalRevenue,
+                    SUM(p.TipAmount)               AS TotalTip,
+                    SUM(p.VatLowAmount)            AS TotalVatLow,
+                    SUM(p.VatHighAmount)           AS TotalVatHigh,
+                    COUNT(DISTINCT p.OrderId)      AS TotalOrders
+                FROM dbo.Payments p
+                WHERE p.PaidAt >= @Start AND p.PaidAt < @End
+                GROUP BY CAST(p.PaidAt AS DATE)
+                ORDER BY PayDate";
+
+            using SqlConnection conn = new SqlConnection(_connectionString);
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            cmd.Parameters.Add("@Start", System.Data.SqlDbType.DateTime).Value = startDate.Date;
+            cmd.Parameters.Add("@End",   System.Data.SqlDbType.DateTime).Value = endDate.Date.AddDays(1);
+            conn.Open();
+            using SqlDataReader reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                decimal rev = reader.GetDecimal(reader.GetOrdinal("TotalRevenue"));
+                decimal tip = reader.GetDecimal(reader.GetOrdinal("TotalTip"));
+                vm.TotalRevenue += rev;
+                vm.TotalTip     += tip;
+                vm.TotalVatLow  += reader.GetDecimal(reader.GetOrdinal("TotalVatLow"));
+                vm.TotalVatHigh += reader.GetDecimal(reader.GetOrdinal("TotalVatHigh"));
+                vm.TotalOrders  += reader.GetInt32(reader.GetOrdinal("TotalOrders"));
+                vm.DailyBreakdown.Add(new DailyRevenueLine
+                {
+                    Date    = reader.GetDateTime(reader.GetOrdinal("PayDate")),
+                    Revenue = rev,
+                    Tip     = tip,
+                    Orders  = reader.GetInt32(reader.GetOrdinal("TotalOrders"))
+                });
+            }
+            reader.Close();
+
+            string cardQuery = @"
+                SELECT mi.Card, SUM(oi.Quantity * mi.Price) AS Revenue
+                FROM dbo.Payments p
+                JOIN dbo.Orders o      ON o.OrderId = p.OrderId
+                JOIN dbo.OrderItems oi ON oi.OrderId = o.OrderId
+                JOIN dbo.MenuItems mi  ON mi.MenuItemId = oi.MenuItemId
+                WHERE p.PaidAt >= @Start AND p.PaidAt < @End
+                GROUP BY mi.Card";
+
+            using SqlCommand cmd2 = new SqlCommand(cardQuery, conn);
+            cmd2.Parameters.Add("@Start", System.Data.SqlDbType.DateTime).Value = startDate.Date;
+            cmd2.Parameters.Add("@End",   System.Data.SqlDbType.DateTime).Value = endDate.Date.AddDays(1);
+            using SqlDataReader r2 = cmd2.ExecuteReader();
+            while (r2.Read())
+            {
+                int card = r2.GetInt32(0);
+                decimal rev = r2.GetDecimal(1);
+                if (card == (int)CardType.Lunch)  vm.LunchRevenue  = rev;
+                if (card == (int)CardType.Dinner) vm.DinnerRevenue = rev;
+                if (card == (int)CardType.Drinks) vm.DrinksRevenue = rev;
+            }
+
+            return vm;
         }
     }
 }

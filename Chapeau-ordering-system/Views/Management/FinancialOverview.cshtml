@@ -1,0 +1,154 @@
+@model Chapeau_ordering_system.ViewModels.FinancialOverviewViewModel
+@{
+    ViewData["Title"] = "Financial Overview";
+}
+
+<div class="container mt-4">
+    <h4 class="fw-bold mb-3">Financial Overview</h4>
+
+    <!-- Date filter -->
+    <form method="get" class="row g-2 mb-4 align-items-end">
+        <div class="col-auto">
+            <label class="form-label small">From</label>
+            <input type="date" name="startDate" value="@Model.StartDate.ToString("yyyy-MM-dd")"
+                   class="form-control form-control-sm" />
+        </div>
+        <div class="col-auto">
+            <label class="form-label small">To</label>
+            <input type="date" name="endDate" value="@Model.EndDate.ToString("yyyy-MM-dd")"
+                   class="form-control form-control-sm" />
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+        </div>
+        <!-- Quick ranges -->
+        <div class="col-auto">
+            @{
+                var today = DateTime.Today;
+                var monthStart = new DateTime(today.Year, today.Month, 1);
+                var quarterStart = new DateTime(today.Year, ((today.Month - 1) / 3) * 3 + 1, 1);
+                var yearStart = new DateTime(today.Year, 1, 1);
+            }
+            <a asp-action="FinancialOverview"
+               asp-route-startDate="@today.ToString("yyyy-MM-dd")"
+               asp-route-endDate="@today.ToString("yyyy-MM-dd")"
+               class="btn btn-outline-secondary btn-sm">Today</a>
+            <a asp-action="FinancialOverview"
+               asp-route-startDate="@monthStart.ToString("yyyy-MM-dd")"
+               asp-route-endDate="@today.ToString("yyyy-MM-dd")"
+               class="btn btn-outline-secondary btn-sm">This Month</a>
+            <a asp-action="FinancialOverview"
+               asp-route-startDate="@quarterStart.ToString("yyyy-MM-dd")"
+               asp-route-endDate="@today.ToString("yyyy-MM-dd")"
+               class="btn btn-outline-secondary btn-sm">This Quarter</a>
+            <a asp-action="FinancialOverview"
+               asp-route-startDate="@yearStart.ToString("yyyy-MM-dd")"
+               asp-route-endDate="@today.ToString("yyyy-MM-dd")"
+               class="btn btn-outline-secondary btn-sm">This Year</a>
+        </div>
+    </form>
+
+    <!-- Summary cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-md-3">
+            <div class="card text-white bg-primary h-100">
+                <div class="card-body">
+                    <div class="small">Total Revenue</div>
+                    <div class="fs-4 fw-bold">€@Model.TotalRevenue.ToString("F2")</div>
+                    <div class="small">@Model.TotalOrders orders</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-md-3">
+            <div class="card text-white bg-success h-100">
+                <div class="card-body">
+                    <div class="small">Total Tips</div>
+                    <div class="fs-4 fw-bold">€@Model.TotalTip.ToString("F2")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-md-3">
+            <div class="card text-dark bg-warning h-100">
+                <div class="card-body">
+                    <div class="small">VAT Low (9%)</div>
+                    <div class="fs-4 fw-bold">€@Model.TotalVatLow.ToString("F2")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-md-3">
+            <div class="card text-dark bg-light h-100">
+                <div class="card-body">
+                    <div class="small">VAT High (21%)</div>
+                    <div class="fs-4 fw-bold">€@Model.TotalVatHigh.ToString("F2")</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card breakdown -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h6>Lunch Revenue</h6>
+                    <div class="fs-5 fw-bold">€@Model.LunchRevenue.ToString("F2")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h6>Dinner Revenue</h6>
+                    <div class="fs-5 fw-bold">€@Model.DinnerRevenue.ToString("F2")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h6>Drinks Revenue</h6>
+                    <div class="fs-5 fw-bold">€@Model.DrinksRevenue.ToString("F2")</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily breakdown -->
+    @if (Model.DailyBreakdown.Any())
+    {
+        <h6 class="fw-bold">Daily Breakdown</h6>
+        <table class="table table-sm table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Date</th>
+                    <th class="text-end">Revenue</th>
+                    <th class="text-end">Tips</th>
+                    <th class="text-end">Orders</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var line in Model.DailyBreakdown)
+                {
+                    <tr>
+                        <td>@line.Date.ToString("ddd dd MMM yyyy")</td>
+                        <td class="text-end">€@line.Revenue.ToString("F2")</td>
+                        <td class="text-end">€@line.Tip.ToString("F2")</td>
+                        <td class="text-end">@line.Orders</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot class="table-secondary fw-bold">
+                <tr>
+                    <td>Total</td>
+                    <td class="text-end">€@Model.TotalRevenue.ToString("F2")</td>
+                    <td class="text-end">€@Model.TotalTip.ToString("F2")</td>
+                    <td class="text-end">@Model.TotalOrders</td>
+                </tr>
+            </tfoot>
+        </table>
+    }
+    else
+    {
+        <div class="alert alert-info">No payments found for this period.</div>
+    }
+</div>

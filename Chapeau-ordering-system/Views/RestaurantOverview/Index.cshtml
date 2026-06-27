@@ -2,270 +2,200 @@
 @using Chapeau_ordering_system.Models.Enums
 @{
     ViewData["Title"] = "Restaurant Overview";
+    var userRole = ViewData["EmployeeRole"]?.ToString();
+    bool isWaiter = !string.IsNullOrEmpty(userRole) &&
+                    userRole.Equals("Waiter", StringComparison.OrdinalIgnoreCase);
     var tables = Model.Tables
         .OrderBy(t => int.TryParse(t.TableNumber.Replace("T", ""), out int n) ? n : 0)
         .ToList();
 }
-@functions {
-    static string ItemBadgeClass(OrderItemStatus status) => status switch
-    {
-        OrderItemStatus.Ordered          => "bg-primary",
-        OrderItemStatus.BeingPrepared    => "bg-warning text-dark",
-        OrderItemStatus.ReadyToBeServed  => "bg-success",
-        OrderItemStatus.Served           => "bg-secondary",
-        _                                => "bg-secondary"
-    };
-}
 
 <style>
-    .floorplan-wrap {
-        position: relative;
-        width: 100%;
-        max-width: 820px;
-        margin: 0 auto;
-        background: #c8a85a;
-        border: 5px solid #4a3520;
-        border-radius: 6px;
-        overflow: hidden;
-        box-shadow: 0 6px 24px rgba(0,0,0,0.35);
-        aspect-ratio: 820 / 700;
+    .item-status-badge {
+        font-size: 0.65rem;
+        padding: 2px 6px;
     }
-
-    /* ── Rooms ── */
-    .fp-room {
-        position: absolute;
-        background: #b89a60;
-        border: 2px solid #4a3520;
+    .order-item-row {
         display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        font-size: 0.8rem;
-        color: #2a1505;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-    }
-    .fp-kitchen   { top: 0;    left: 0;   width: 26%; height: 30%; }
-    .fp-bar       { top: 0;    left: 27%; width: 42%; height: 18%; }
-    .fp-toilets   { top: 0;    right: 0;  width: 16%; height: 23%; writing-mode: vertical-rl; }
-    .fp-cloakroom { top: 30%;  left: 0;   width: 26%; height: 36%; }
-
-    /* ── Dining grid ── */
-    .fp-dining {
-        position: absolute;
-        top: 18%;
-        left: 27%;
-        right: 0;
-        bottom: 0;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: repeat(5, 1fr);
-        gap: 10px;
-        padding: 12px 16px 12px 10px;
-    }
-
-    /* ── Table cards ── */
-    .fp-table {
-        border-radius: 6px;
-        border: 2px solid #4a3520;
-        padding: 4px 6px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
         justify-content: space-between;
-        cursor: pointer;
-        transition: transform 0.12s, box-shadow 0.12s;
-        text-align: center;
-        position: relative;
+        align-items: center;
+        padding: 3px 0;
+        border-bottom: 1px solid #f0f0f0;
+        gap: 6px;
     }
-    .fp-table:hover { transform: scale(1.04); box-shadow: 0 3px 10px rgba(0,0,0,0.3); }
-
-    .fp-free     { background: #d4edda; border-color: #28a745; }
-    .fp-occupied { background: #f8d7da; border-color: #dc3545; }
-    .fp-reserved { background: #fff3cd; border-color: #ffc107; }
-
-    /* Decorative chair bars */
-    .chair-bar {
-        width: 55%;
-        height: 5px;
-        background: #7a5c3a;
-        border-radius: 3px;
-        margin: 0 auto;
-    }
-
-    .fp-table-num   { font-weight: 800; font-size: 1rem; line-height: 1; }
-    .fp-table-since { font-size: 0.62rem; color: #555; }
-
-    .status-dot {
-        display: inline-block;
-        width: 8px; height: 8px;
-        border-radius: 50%;
-        margin-right: 3px;
-        vertical-align: middle;
-    }
-    .dot-free     { background: #28a745; }
-    .dot-occupied { background: #dc3545; }
-    .dot-reserved { background: #ffc107; }
-
-    /* Legend + header */
-    .fp-legend span { font-size: 0.8rem; }
+    .order-item-row:last-child { border-bottom: none; }
+    .item-name { font-size: 0.8rem; flex: 1; }
 </style>
 
-<div class="container-fluid mt-3" style="max-width:860px;">
+<div class="container mt-4">
 
-    @if (TempData["ErrorMessage"] is string errorMsg)  { <div class="alert alert-danger">@errorMsg</div> }
-    @if (TempData["ConfirmMessage"] is string confirmMsg) { <div class="alert alert-success">@confirmMsg</div> }
-    @if (TempData["Error"] is string err) { <div class="alert alert-danger">@err</div> }
-
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <h5 class="mb-0 fw-bold">Restaurant Chapeau — Floor Plan</h5>
-        <div class="d-flex align-items-center gap-3 fp-legend">
-            <span><span class="status-dot dot-free"></span>Free</span>
-            <span><span class="status-dot dot-occupied"></span>Occupied</span>
-            <span><span class="status-dot dot-reserved"></span>Reserved</span>
-            <form method="get" asp-action="Index" class="m-0">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0 fw-bold">Restaurant Overview</h4>
+        <div class="d-flex align-items-center gap-3">
+            <span class="text-muted small">
+                Welcome, <strong>@ViewData["EmployeeName"]</strong>
+                <span class="badge bg-secondary ms-1">@ViewData["EmployeeRole"]</span>
+            </span>
+            <form method="get" asp-action="Index">
                 <button type="submit" class="btn btn-sm btn-outline-secondary">&#8635; Refresh</button>
             </form>
         </div>
     </div>
 
-    <!-- ── Floor plan ── -->
-    <div class="floorplan-wrap">
-        <div class="fp-room fp-kitchen">Kitchen</div>
-        <div class="fp-room fp-bar">Bar</div>
-        <div class="fp-room fp-toilets">Toilets</div>
-        <div class="fp-room fp-cloakroom">Cloakroom</div>
-
-        <div class="fp-dining">
-            @foreach (var t in tables)
-            {
-                string cardCss = t.Status switch {
-                    TableStatus.Free     => "fp-free",
-                    TableStatus.Occupied => "fp-occupied",
-                    TableStatus.Reserved => "fp-reserved",
-                    _                    => ""
-                };
-                string dotCss = t.Status switch {
-                    TableStatus.Free     => "dot-free",
-                    TableStatus.Occupied => "dot-occupied",
-                    TableStatus.Reserved => "dot-reserved",
-                    _                    => ""
-                };
-
-                <div class="fp-table @cardCss"
-                     data-bs-toggle="modal"
-                     data-bs-target="#modal-@t.TableId">
-                    <div class="chair-bar"></div>
-                    <div>
-                        <div class="fp-table-num">@t.TableNumber</div>
-                        <div style="font-size:0.7rem;">
-                            <span class="status-dot @dotCss"></span>@t.Status
-                        </div>
-                        @if (t.OccupiedSince.HasValue)
-                        {
-                            int mins = (int)(DateTime.Now - t.OccupiedSince.Value).TotalMinutes;
-                            <div class="fp-table-since">@mins min ago</div>
-                        }
-                    </div>
-                    <div class="chair-bar"></div>
-                </div>
-            }
+    @if (TempData["Error"] is string err)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @err <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
+    }
+    @if (TempData["ErrorMessage"] is string errMsg)
+    {
+        <div class="alert alert-danger">@errMsg</div>
+    }
+    @if (TempData["ConfirmMessage"] is string confirmMsg)
+    {
+        <div class="alert alert-success">@confirmMsg</div>
+    }
+
+    <!-- Legend -->
+    <div class="d-flex gap-3 mb-3 small">
+        <span><span class="badge bg-success">Free</span></span>
+        <span><span class="badge bg-danger">Occupied</span></span>
+        <span><span class="badge bg-primary item-status-badge">Ordered</span></span>
+        <span><span class="badge bg-warning text-dark item-status-badge">Being Prepared</span></span>
+        <span><span class="badge bg-success item-status-badge">Ready to Serve</span></span>
+        <span><span class="badge bg-secondary item-status-badge">Served</span></span>
     </div>
 
-    <!-- ── Table detail modals ── -->
-    @foreach (var t in tables)
-    {
-        var orders = Model.GetOrdersForTable(t.TableId).ToList();
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+        @foreach (var table in tables)
+        {
+            var isOccupied = table.Status == TableStatus.Occupied;
+            var tableOrders = Model.GetOrdersForTable(table.TableId).ToList();
+            var hasOrders = tableOrders.Any();
 
-        <div class="modal fade" id="modal-@t.TableId" tabindex="-1">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header @(t.Status == TableStatus.Free ? "bg-success text-white" : t.Status == TableStatus.Occupied ? "bg-danger text-white" : "bg-warning")">
-                        <h5 class="modal-title">Table @t.TableNumber &mdash; @t.Status</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p class="mb-1"><strong>Seats:</strong> @t.NumberOfSeats</p>
-                        @if (t.OccupiedSince.HasValue)
-                        {
-                            int mins = (int)(DateTime.Now - t.OccupiedSince.Value).TotalMinutes;
-                            <p class="mb-1"><strong>Occupied since:</strong> @t.OccupiedSince.Value.ToShortTimeString() <span class="text-muted">(@mins min ago)</span></p>
-                        }
+            string headerClass = isOccupied ? "bg-danger text-white" : "bg-success text-white";
+            string borderClass = isOccupied ? "border-danger" : "border-success";
 
-                        @if (orders.Any())
-                        {
-                            <hr class="my-2" />
-                            <h6 class="fw-bold">Current Order</h6>
-                            <table class="table table-sm mb-0">
-                                <tbody>
-                                    @foreach (var order in orders)
-                                    {
-                                        @foreach (var item in order.OrderItems)
-                                        {
-                                            <tr>
-                                                <td>@item.Quantity&times; @item.MenuItem?.Name</td>
-                                                <td><span class="badge @ItemBadgeClass(item.Status)">@item.Status</span></td>
-                                                <td>
-                                                    @if (item.Status == OrderItemStatus.ReadyToBeServed)
-                                                    {
-                                                        <form method="post" asp-action="MarkServed" asp-controller="RestaurantOverview">
-                                                            <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
-                                                            <button type="submit" class="btn btn-sm btn-outline-success py-0 px-1">Serve</button>
-                                                        </form>
-                                                    }
-                                                </td>
-                                            </tr>
-                                        }
-                                    }
-                                </tbody>
-                            </table>
-                        }
-                        else if (t.Status == TableStatus.Occupied)
-                        {
-                            <p class="text-muted small mt-2 mb-0">No items ordered yet.</p>
-                        }
-                    </div>
-                    <div class="modal-footer flex-wrap gap-2">
-                        @if (t.IsFree)
-                        {
-                            <form asp-controller="Order" asp-action="StartOrder" method="post">
-                                <input type="hidden" name="tableId" value="@t.TableId" />
-                                <button type="submit" class="btn btn-primary">Start Order</button>
-                            </form>
-                            <form asp-controller="RestaurantOverview" asp-action="ChangeStatus" method="post">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="tableId" value="@t.TableId" />
-                                <input type="hidden" name="newStatus" value="1" />
-                                <button type="submit" class="btn btn-outline-danger">Mark Occupied</button>
-                            </form>
-                        }
-                        else if (t.Status == TableStatus.Occupied)
-                        {
-                            @if (t.CurrentOrderId.HasValue)
+            <div class="col">
+                <div class="card h-100 @borderClass" style="border-width: 2px;">
+                    <!-- Card header -->
+                    <div class="card-header d-flex justify-content-between align-items-center py-2 @headerClass">
+                        <strong>@table.TableNumber</strong>
+                        <div class="d-flex align-items-center gap-2">
+                            @if (table.OccupiedSince.HasValue)
                             {
-                                <form asp-controller="Order" asp-action="LoadOrder" method="post">
-                                    <input type="hidden" name="tableId" value="@t.TableId" />
-                                    <button type="submit" class="btn btn-warning">Load Order</button>
+                                int mins = (int)(DateTime.Now - table.OccupiedSince.Value).TotalMinutes;
+                                <small>@mins min</small>
+                            }
+                            <span class="badge bg-light text-dark">@table.Status</span>
+                        </div>
+                    </div>
+
+                    <div class="card-body p-2">
+                        <div class="small text-muted mb-1">Seats: @table.NumberOfSeats</div>
+
+                        @if (isOccupied && hasOrders)
+                        {
+                            <!-- R3: show all order items with their statuses -->
+                            @foreach (var order in tableOrders)
+                            {
+                                @foreach (var item in order.OrderItems.Where(i => i.Status != OrderItemStatus.Cancelled))
+                                {
+                                    string badgeClass = item.Status switch {
+                                        OrderItemStatus.Ordered         => "bg-primary",
+                                        OrderItemStatus.BeingPrepared   => "bg-warning text-dark",
+                                        OrderItemStatus.ReadyToBeServed => "bg-success",
+                                        OrderItemStatus.Served          => "bg-secondary",
+                                        _                               => "bg-secondary"
+                                    };
+
+                                    <div class="order-item-row">
+                                        <span class="item-name">
+                                            @item.Quantity&times; @item.MenuItem?.Name
+                                        </span>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <span class="badge @badgeClass item-status-badge">@item.Status</span>
+                                            @if (item.Status == OrderItemStatus.ReadyToBeServed)
+                                            {
+                                                <form method="post" asp-action="MarkServed" asp-controller="RestaurantOverview">
+                                                    <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
+                                                    <button type="submit"
+                                                            class="btn btn-outline-success py-0 px-1"
+                                                            style="font-size:0.65rem;">
+                                                        Serve ✓
+                                                    </button>
+                                                </form>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        }
+                        else if (isOccupied)
+                        {
+                            <p class="text-muted small mb-0">No items ordered yet.</p>
+                        }
+                        else
+                        {
+                            <p class="text-muted small mb-0">Table is free.</p>
+                        }
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div class="card-footer bg-transparent pt-1 pb-2 px-2 d-flex flex-column gap-1">
+                        @if (isWaiter)
+                        {
+                            if (table.IsFree)
+                            {
+                                <form asp-controller="Order" asp-action="StartOrder" method="post">
+                                    <input type="hidden" name="tableId" value="@table.TableId" />
+                                    <button type="submit" class="btn btn-sm btn-primary w-100">Start Order</button>
+                                </form>
+                                <form asp-controller="RestaurantOverview" asp-action="ChangeStatus" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="tableId" value="@table.TableId" />
+                                    <input type="hidden" name="newStatus" value="1" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger w-100">Mark Occupied</button>
                                 </form>
                             }
-                            @if (orders.Any())
+                            else if (isOccupied)
                             {
-                                <a asp-controller="Payment" asp-action="ViewOrder"
-                                   asp-route-tableId="@t.TableId"
-                                   class="btn btn-success">Pay</a>
+                                if (table.CurrentOrderId.HasValue)
+                                {
+                                    <form asp-controller="Order" asp-action="LoadOrder" method="post">
+                                        <input type="hidden" name="tableId" value="@table.TableId" />
+                                        <button type="submit" class="btn btn-sm btn-warning w-100">Load Order</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <form asp-controller="Order" asp-action="StartOrder" method="post">
+                                        <input type="hidden" name="tableId" value="@table.TableId" />
+                                        <button type="submit" class="btn btn-sm btn-primary w-100">Start Order</button>
+                                    </form>
+                                }
+                                @if (hasOrders)
+                                {
+                                    <a asp-controller="Payment" asp-action="ViewOrder"
+                                       asp-route-tableId="@table.TableId"
+                                       class="btn btn-sm btn-success w-100">Pay</a>
+                                }
+                                <form asp-controller="RestaurantOverview" asp-action="ChangeStatus" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="tableId" value="@table.TableId" />
+                                    <input type="hidden" name="newStatus" value="0" />
+                                    <button type="submit" class="btn btn-sm btn-outline-success w-100">Mark Free</button>
+                                </form>
                             }
-                            <form asp-controller="RestaurantOverview" asp-action="ChangeStatus" method="post">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="tableId" value="@t.TableId" />
-                                <input type="hidden" name="newStatus" value="0" />
-                                <button type="submit" class="btn btn-outline-success">Mark Free</button>
-                            </form>
                         }
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        else
+                        {
+                            <button class="btn btn-sm btn-outline-secondary w-100" disabled>Login as Waiter to manage</button>
+                        }
                     </div>
                 </div>
             </div>
-        </div>
-    }
+        }
+    </div>
 </div>
