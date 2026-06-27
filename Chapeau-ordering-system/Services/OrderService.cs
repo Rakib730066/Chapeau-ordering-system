@@ -1,8 +1,8 @@
-using System.Transactions;
 using Chapeau_ordering_system.Models;
 using Chapeau_ordering_system.Models.Enums;
 using Chapeau_ordering_system.Repositories.Interfaces;
 using Chapeau_ordering_system.Services.Interfaces;
+using System.Transactions;
 
 namespace Chapeau_ordering_system.Services
 {
@@ -58,13 +58,10 @@ namespace Chapeau_ordering_system.Services
             return newOrderId;
         }
 
-        public void SaveOrder(int orderId, List<OrderItem> items)
+        public void SaveOrder(int orderId)
         {
             if (orderId <= 0)
                 throw new InvalidOperationException("Invalid order.");
-
-            if (!items.Any())
-                throw new InvalidOperationException("Order cannot be empty. Add items before sending.");
 
             using var scope = new TransactionScope(TransactionScopeOption.Required);
 
@@ -214,8 +211,7 @@ namespace Chapeau_ordering_system.Services
 
         public Order? GetOrderById(int orderId)
         {
-            return _orderRepository.GetOpenOrders()
-                .FirstOrDefault(o => o.OrderId == orderId);
+            return _orderRepository.GetOrderById(orderId);
         }
         public Order? GetOrderByTableId(int tableId)
         {
@@ -223,9 +219,19 @@ namespace Chapeau_ordering_system.Services
                 throw new InvalidOperationException("Invalid table.");
 
             Order? order = _orderRepository.GetOpenOrders()
-                .FirstOrDefault(o => o.Table?.TableId == tableId);         
+                .FirstOrDefault(o => o.Table?.TableId == tableId);
 
             return order;
+        }
+
+        public bool TableHasUnservedItems(int tableId)
+        {
+            return _orderRepository.TableHasUnservedItems(tableId);
+        }
+
+        public void MarkItemServed(int orderItemId)
+        {
+            _orderRepository.UpdateOrderItemStatus(orderItemId, OrderItemStatus.Served);
         }
     }
 }

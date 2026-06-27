@@ -1,0 +1,14 @@
+﻿@{
+    ViewData["Title"] = "Payment Confirmed";
+}
+
+<div class="container mt-4">
+    <div class="alert alert-success">
+        <h4 class="alert-heading">Payment confirmed ✓</h4>
+        <p>@ViewData["Message"]</p>
+    </div>
+
+    <a asp-controller="RestaurantOverview" asp-action="Index" class="btn btn-primary">
+        Back to Restaurant Overview
+    </a>
+</div>

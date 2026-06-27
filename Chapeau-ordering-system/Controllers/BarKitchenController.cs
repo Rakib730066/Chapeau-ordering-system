@@ -13,30 +13,135 @@ namespace Chapeau_ordering_system.Controllers
             _barKitchenService = barKitchenService;
         }
 
-        // Single view for Bar and Kitchen - determines role from logged-in employee
-        public IActionResult Index()
+        // Only Bar and Kitchen employees can access this page
+        private bool IsBarOrKitchenEmployee()
         {
-            // Get the bar/kitchen view
-            BarKitchenViewModel viewModel = _barKitchenService.GetKitchenViewModel();
+            string? role = HttpContext.Session.GetString("EmployeeRole");
+            return role == "Bar" || role == "Kitchen";
+        }
+
+        public IActionResult Index(string viewMode = "running")
+        {
+            if (!IsBarOrKitchenEmployee())
+                return RedirectToAction("Login", "Account");
+            
+            BarKitchenViewModel viewModel;
+            if (viewMode == "finished")
+            {
+                viewModel = _barKitchenService.GetFinishedOrdersTodayViewModel();
+            }
+            else
+            {
+                viewModel = _barKitchenService.GetRunningOrdersViewModel();
+            }
+
+            viewModel.ErrorMessage = TempData["ErrorMessage"] as string;
+            viewModel.ConfirmMessage = TempData["ConfirmMessage"] as string;
+
             return View(viewModel);
         }
 
-        // Start preparing an item
+        private void SetStatusMessage(bool isSuccessful, string confirmMessage, string errorMessage)
+        {
+            if (isSuccessful)
+                TempData["ConfirmMessage"] = confirmMessage;
+            else
+                TempData["ErrorMessage"] = errorMessage;
+        }
+
+        // POST: Mark one order item as being prepared
         [HttpPost]
         public IActionResult StartItem(int orderItemId)
         {
-            _barKitchenService.MarkItemBeingPrepared(orderItemId);
-            TempData["ConfirmMessage"] = "Item preparation started.";
-            return RedirectToAction("Index");
+            if (!IsBarOrKitchenEmployee())
+                return RedirectToAction("Login", "Account");
+
+            bool isSuccessful = _barKitchenService.MarkItemBeingPrepared(orderItemId);
+            SetStatusMessage(
+                isSuccessful,
+                "Order item started successfully.",
+                "Could not start the order item. It may already be in progress, ready, or unavailable.");
+
+            return RedirectToAction("Index", new { viewMode = "running" });
         }
 
-        // Mark item as ready to be served
+        // POST: Mark order item as ready to be served
         [HttpPost]
         public IActionResult MarkItemReady(int orderItemId)
         {
-            _barKitchenService.MarkItemReady(orderItemId);
-            TempData["ConfirmMessage"] = "Item marked as ready.";
-            return RedirectToAction("Index");
+            if (!IsBarOrKitchenEmployee())
+                return RedirectToAction("Login", "Account");
+
+            bool isSuccessful = _barKitchenService.MarkItemReady(orderItemId);
+            SetStatusMessage(
+                isSuccessful,
+                "Order item marked as ready.",
+                "Could not mark the order item as ready. It may not be in preparation or may be unavailable.");
+
+            return RedirectToAction("Index", new { viewMode = "running" });
+        }
+        // POST: Mark ALL items in order as being prepared
+        [HttpPost]
+        public IActionResult StartOrder(int orderId)
+        {
+            if (!IsBarOrKitchenEmployee())
+                return RedirectToAction("Login", "Account");
+
+            bool isSuccessful = _barKitchenService.MarkOrderBeingPrepared(orderId);
+            SetStatusMessage(
+                isSuccessful,
+                "Order started successfully.",
+                "Could not start the order. There may be no ordered items to start.");
+
+            return RedirectToAction("Index", new { viewMode = "running" });
+        }
+
+        // POST: Mark ALL items in order as ready to be served
+        [HttpPost]
+        public IActionResult MarkOrderReady(int orderId)
+        {
+            if (!IsBarOrKitchenEmployee())
+                return RedirectToAction("Login", "Account");
+
+            bool isSuccessful = _barKitchenService.MarkOrderReadyToServe(orderId);
+            SetStatusMessage(
+                isSuccessful,
+                "Order marked as ready.",
+                "Could not mark the order as ready. There may be no items that can be updated.");
+
+            return RedirectToAction("Index", new { viewMode = "finished" });
+        }
+
+        // POST: Mark all items in a course as being prepared (Kitchen only)
+        [HttpPost]
+        public IActionResult StartCourse(int orderId, int courseType)
+        {
+            if (!IsBarOrKitchenEmployee())
+                return RedirectToAction("Login", "Account");
+
+            bool isSuccessful = _barKitchenService.MarkCourseBeingPrepared(orderId, courseType);
+            SetStatusMessage(
+                isSuccessful,
+                "Course started successfully.",
+                "Could not start the course. It may be invalid, already started, or unavailable.");
+
+            return RedirectToAction("Index", new { viewMode = "running" });
+        }
+
+        // POST: Mark all items in a course as ready to be served (Kitchen only)
+        [HttpPost]
+        public IActionResult MarkCourseReady(int orderId, int courseType)
+        {
+            if (!IsBarOrKitchenEmployee())
+                return RedirectToAction("Login", "Account");
+
+            bool isSuccessful = _barKitchenService.MarkCourseReadyToServe(orderId, courseType);
+            SetStatusMessage(
+                isSuccessful,
+                "Course marked as ready.",
+                "Could not mark the course as ready. It may not be in preparation or may be unavailable.");
+
+            return RedirectToAction("Index", new { viewMode = "running" });
         }
     }
 }

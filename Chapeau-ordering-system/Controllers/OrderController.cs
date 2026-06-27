@@ -114,14 +114,14 @@ namespace Chapeau_ordering_system.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult AddItem(int menuItemId, int tableId, MenuItemType? type, CourseType? course)
+        public IActionResult AddItem(int menuItemId, int tableId, MenuItemType? type, CourseType? course, CardType? card)
         {
             int orderId = GetOrderSession();
 
             if (orderId == 0)
             {
                 TempData["ErrorMessage"] = "Please start an order before adding items.";
-                return RedirectToAction("Menu", new { tableId, type = (int?)type, course = (int?)course });
+                return RedirectToAction("Menu", new { tableId, type = (int?)type, course = (int?)course, card = (int?)card });
             }
 
             try
@@ -133,7 +133,7 @@ namespace Chapeau_ordering_system.Controllers
                 TempData["ErrorMessage"] = ex.Message;
             }
 
-            return RedirectToTakeOrder(tableId, type, course);
+            return RedirectToTakeOrder(tableId, type, course, card);
         }
 
         [HttpPost]
@@ -248,20 +248,17 @@ namespace Chapeau_ordering_system.Controllers
 
         private void ValidateAndSendOrder(int orderId)
         {
-            Order? order = _orderService.GetOrderById(orderId);
+            List<OrderItem> items = _orderService.GetItemsByOrderId(orderId);
 
-            if (order == null)
-                throw new InvalidOperationException("Order not found.");
-
-            if (!order.OrderItems.Any())
+            if (!items.Any())
                 throw new InvalidOperationException("Order cannot be empty. Add items before sending.");
 
-            _orderService.SaveOrder(orderId, order.OrderItems);
+            _orderService.SaveOrder(orderId);
         }
 
-        private IActionResult RedirectToTakeOrder(int tableId, MenuItemType? type = null, CourseType? course = null)
+        private IActionResult RedirectToTakeOrder(int tableId, MenuItemType? type = null, CourseType? course = null, CardType? card = null)
         {
-            return RedirectToAction("TakeOrder", new { tableId, type = (int?)type, course = (int?)course });
+            return RedirectToAction("TakeOrder", new { tableId, type = (int?)type, course = (int?)course, card = (int?)card });
         }
 
         private int GetOrderSession()

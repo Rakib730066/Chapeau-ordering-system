@@ -1,20 +1,33 @@
 using Chapeau_ordering_system.Models;
+using Chapeau_ordering_system.Models.Enums;
 using Chapeau_ordering_system.ViewModels;
 
 namespace Chapeau_ordering_system.Services.Interfaces
 {
     public interface IBarKitchenService
     {
-        // Get Kitchen ViewModel with food orders
-        BarKitchenViewModel GetKitchenViewModel();
+        // Get running orders view
+        BarKitchenViewModel GetRunningOrdersViewModel();
 
-        // Get Bar ViewModel with drink orders
-        BarKitchenViewModel GetBarViewModel();
+        // Get finished orders today view
+        BarKitchenViewModel GetFinishedOrdersTodayViewModel();
 
-        // Mark order item as being prepared
-        void MarkItemBeingPrepared(int orderItemId);
+        // Mark order item as being prepared (service determines role internally)
+        bool MarkItemBeingPrepared(int orderItemId);
 
-        // Mark order item as ready to be served
-        void MarkItemReady(int orderItemId);
+        // Mark order item as ready to be served (service determines role internally)
+        bool MarkItemReady(int orderItemId);
+
+        // Mark all items in an order as being prepared (service determines role internally)
+        bool MarkOrderBeingPrepared(int orderId);
+
+        // Mark all items in an order as ready to be served (service determines role internally)
+        bool MarkOrderReadyToServe(int orderId);
+
+        // Mark all items in a course as being prepared (Kitchen only)
+        bool MarkCourseBeingPrepared(int orderId, int courseType);
+
+        // Mark all items in a course as ready to be served (Kitchen only)
+        bool MarkCourseReadyToServe(int orderId, int courseType);
     }
 }
