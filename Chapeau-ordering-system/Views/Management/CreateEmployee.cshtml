@@ -1,0 +1,55 @@
+@model Chapeau_ordering_system.ViewModels.EmployeeFormViewModel
+@using Chapeau_ordering_system.Models.Enums
+@{
+    ViewData["Title"] = "Add Employee";
+}
+
+<div class="container mt-4" style="max-width:480px">
+    <h4 class="fw-bold mb-3">Add Employee</h4>
+
+    <form asp-action="CreateEmployee" method="post">
+        @Html.AntiForgeryToken()
+
+        <div class="row g-2 mb-2">
+            <div class="col">
+                <label asp-for="FirstName" class="form-label"></label>
+                <input asp-for="FirstName" class="form-control" />
+                <span asp-validation-for="FirstName" class="text-danger small"></span>
+            </div>
+            <div class="col">
+                <label asp-for="LastName" class="form-label"></label>
+                <input asp-for="LastName" class="form-control" />
+                <span asp-validation-for="LastName" class="text-danger small"></span>
+            </div>
+        </div>
+        <div class="mb-2">
+            <label asp-for="Username" class="form-label"></label>
+            <input asp-for="Username" class="form-control" />
+            <span asp-validation-for="Username" class="text-danger small"></span>
+        </div>
+        <div class="mb-2">
+            <label asp-for="Email" class="form-label"></label>
+            <input asp-for="Email" type="email" class="form-control" />
+            <span asp-validation-for="Email" class="text-danger small"></span>
+        </div>
+        <div class="mb-2">
+            <label asp-for="Password" class="form-label">Password</label>
+            <input asp-for="Password" type="password" class="form-control" />
+            <span asp-validation-for="Password" class="text-danger small"></span>
+        </div>
+        <div class="mb-2">
+            <label asp-for="Role" class="form-label"></label>
+            <select asp-for="Role" class="form-select"
+                    asp-items="Html.GetEnumSelectList<EmployeeRole>()"></select>
+        </div>
+        <div class="form-check mb-3">
+            <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+            <label asp-for="IsActive" class="form-check-label">Active</label>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Create</button>
+            <a asp-action="Employees" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>

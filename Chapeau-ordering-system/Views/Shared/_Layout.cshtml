@@ -28,12 +28,48 @@
                     </ul>
                     <div class="d-flex align-items-center">
                         @{
-                            var employeeId = Context.Session.GetInt32("EmployeeId");
+                            var employeeId   = Context.Session.GetInt32("EmployeeId");
                             var employeeName = Context.Session.GetString("EmployeeName");
+                            var employeeRole = Context.Session.GetString("EmployeeRole");
                         }
                         @if (employeeId != null)
                         {
-                            <span class="me-3">Hello, <strong>@employeeName</strong></span>
+                            <ul class="navbar-nav me-3">
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="RestaurantOverview" asp-action="Index">Overview</a>
+                                </li>
+                                @if (employeeRole == "Waiter" || employeeRole == "Manager")
+                                {
+                                    <li class="nav-item dropdown">
+                                        <a class="nav-link dropdown-toggle text-dark" href="#" data-bs-toggle="dropdown">Orders</a>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" asp-controller="Payment" asp-action="ViewOrder">Payment</a></li>
+                                        </ul>
+                                    </li>
+                                }
+                                @if (employeeRole == "Bar" || employeeRole == "Kitchen")
+                                {
+                                    <li class="nav-item">
+                                        <a class="nav-link text-dark" asp-controller="BarKitchen" asp-action="Index">@employeeRole</a>
+                                    </li>
+                                }
+                                @if (employeeRole == "Manager")
+                                {
+                                    <li class="nav-item dropdown">
+                                        <a class="nav-link dropdown-toggle text-dark" href="#" data-bs-toggle="dropdown">Management</a>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" asp-controller="Management" asp-action="MenuItems">Menu Items</a></li>
+                                            <li><a class="dropdown-item" asp-controller="Management" asp-action="Employees">Employees</a></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item" asp-controller="Management" asp-action="FinancialOverview">Financial Overview</a></li>
+                                        </ul>
+                                    </li>
+                                }
+                            </ul>
+                            <span class="me-3 text-muted small">
+                                <strong>@employeeName</strong>
+                                <span class="badge bg-secondary ms-1">@employeeRole</span>
+                            </span>
                             <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-outline-danger btn-sm">Log out</button>
