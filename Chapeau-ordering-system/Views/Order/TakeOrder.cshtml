@@ -54,7 +54,13 @@
         <div class="col-lg-8">
 
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <h5 class="mb-0 fw-bold">Menu — Table @Model.Menu.TableId</h5>
+                <div>
+                    <h5 class="mb-0 fw-bold">Menu — Table @Model.Menu.TableId</h5>
+                    @if (!string.IsNullOrWhiteSpace(Model.WaiterName))
+                    {
+                        <small class="text-muted">Waiter: @Model.WaiterName</small>
+                    }
+                </div>
                 <a asp-controller="RestaurantOverview" asp-action="Index"
                    class="btn btn-outline-secondary btn-sm">&larr; Back</a>
             </div>
@@ -96,7 +102,7 @@
                 </div>
 
                 @* Course — only when food is active *@
-                @if (Model.Menu.ActiveType == null || Model.Menu.ActiveType == MenuItemType.Food)
+                @if (Model.Menu.ShowCourseFilter)
                 {
                     <span class="text-muted">|</span>
                     <div class="btn-group btn-group-sm" role="group">
@@ -126,12 +132,7 @@
 
                 @if (typeGroup.Key == MenuItemType.Food)
                 {
-                    var byCourse = typeGroup
-                        .GroupBy(i => i.Course)
-                        .Where(g => Model.Menu.DisplayCourses.Contains(g.Key))
-                        .OrderBy(g => g.Key);
-
-                    @foreach (var courseGroup in byCourse)
+                    @foreach (var courseGroup in Model.Menu.FoodItemsByCourse)
                     {
                         @if (Model.Menu.ActiveCourse == null || Model.Menu.ActiveCourse == courseGroup.Key)
                         {
@@ -250,13 +251,6 @@
                             <tbody>
                                 @foreach (var item in Model.SentItems)
                                 {
-                                    string badgeClass = item.Status switch {
-                                        Chapeau_ordering_system.Models.Enums.OrderItemStatus.Ordered         => "bg-primary",
-                                        Chapeau_ordering_system.Models.Enums.OrderItemStatus.BeingPrepared   => "bg-warning text-dark",
-                                        Chapeau_ordering_system.Models.Enums.OrderItemStatus.ReadyToBeServed => "bg-success",
-                                        Chapeau_ordering_system.Models.Enums.OrderItemStatus.Served          => "bg-secondary",
-                                        _ => "bg-secondary"
-                                    };
                                     <tr>
                                         <td style="max-width:130px">
                                             <div class="fw-semibold" style="font-size:.85rem">@item.MenuItem?.Name</div>
@@ -269,7 +263,17 @@
                                         <td class="text-end fw-bold" style="font-size:.85rem">
                                             &euro;@((item.MenuItem!.Price * item.Quantity).ToString("0.00"))
                                         </td>
-                                        <td><span class="badge @badgeClass" style="font-size:.65rem">@item.Status</span></td>
+                                        <td>
+                                            <span class="badge @item.StatusBadgeClass" style="font-size:.65rem">@item.Status</span>
+                                            @if (item.CanBeServed)
+                                            {
+                                                <form asp-action="MarkServed" method="post" class="mt-1">
+                                                    <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
+                                                    <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
+                                                    <button type="submit" class="btn btn-success btn-sm px-2 py-0" style="font-size:.65rem">✓ Served</button>
+                                                </form>
+                                            }
+                                        </td>
                                     </tr>
                                 }
                             </tbody>
@@ -278,6 +282,13 @@
                                     <td colspan="2" class="fw-bold" style="font-size:.8rem">Sent Total</td>
                                     <td class="text-end fw-bold text-secondary" style="font-size:.85rem">
                                         &euro;@Model.SentItemTotal.ToString("0.00")
+                                    </td>
+                                    <td></td>
+                                </tr>
+                                <tr class="table-dark">
+                                    <td colspan="2" class="fw-bold" style="font-size:.8rem">Table Total</td>
+                                    <td class="text-end fw-bold" style="font-size:.9rem">
+                                        &euro;@Model.TableTotal.ToString("0.00")
                                     </td>
                                     <td></td>
                                 </tr>
@@ -295,7 +306,7 @@
             @* ── New Order ── *@
             <div class="card sticky-top" style="top: 70px;">
                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0 fw-bold">@(Model.SentItems.Any() ? "New Order" : "Current Order")</h6>
+                    <h6 class="mb-0 fw-bold">@Model.OrderPanelTitle</h6>
                     @if (Model.CurrentItems.Any())
                     {
                         <span class="badge bg-light text-dark">@Model.CurrentItemCount items</span>
@@ -385,10 +396,26 @@
                             </tbody>
                             <tfoot>
                                 <tr class="table-light">
-                                    <td colspan="2" class="fw-bold">Total</td>
+                                    <td colspan="2" class="fw-bold">Round Total</td>
                                     <td class="text-end fw-bold text-primary">&euro;@Model.TotalPrice.ToString("0.00")</td>
                                     <td></td>
                                 </tr>
+                                @if (Model.SentItems.Any())
+                                {
+                                    <tr class="table-dark">
+                                        <td colspan="2" class="fw-bold">Table Total</td>
+                                        <td class="text-end fw-bold">&euro;@Model.TableTotal.ToString("0.00")</td>
+                                        <td></td>
+                                    </tr>
+                                }
+                                @foreach (var vat in Model.VatBreakdown)
+                                {
+                                    <tr>
+                                        <td colspan="2" class="text-muted" style="font-size:.75rem">VAT @vat.Rate.ToString("P0")</td>
+                                        <td class="text-end text-muted" style="font-size:.75rem">&euro;@vat.Amount.ToString("0.00")</td>
+                                        <td></td>
+                                    </tr>
+                                }
                             </tfoot>
                         </table>
 
@@ -397,12 +424,19 @@
                             <div class="alert alert-success text-center fw-bold mb-2 py-2">
                                 ✓ Order sent to Kitchen/Bar
                             </div>
+                            <form asp-action="LoadOrder" method="post" class="mb-2">
+                                <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
+                                <button type="submit" class="btn btn-primary w-100 fw-bold">+ New Round</button>
+                            </form>
                         }
                         else
                         {
                             <form asp-action="SendOrder" method="post" class="mb-2">
                                 <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
-                                <button type="submit" class="btn btn-success w-100 fw-bold">Send Order to Kitchen/Bar</button>
+                                <button type="submit" class="btn btn-success w-100 fw-bold"
+                                        onclick="return confirm('Send @Model.CurrentItemCount item(s) to Kitchen/Bar?')">
+                                    Send Order to Kitchen/Bar
+                                </button>
                             </form>
 
                             <form asp-action="CancelOrder" method="post">

@@ -34,6 +34,15 @@ namespace Chapeau_ordering_system.Services
             return _orderRepository.GetOrderByTableId(tableId);
         }
 
+        // ── GetOrCreateOrder ─────────────────────────────────────────────────────
+
+        public int GetOrCreateOrder(int tableId, int employeeId)
+        {
+            var existing = _orderRepository.GetOrderByTableId(tableId);
+            if (existing != null) return existing.OrderId;
+            return StartOrder(tableId, employeeId);
+        }
+
         // ── StartOrder ───────────────────────────────────────────────────────────
 
         public int StartOrder(int tableId, int employeeId)
@@ -76,8 +85,9 @@ namespace Chapeau_ordering_system.Services
             if (orderId <= 0) throw new InvalidOperationException("Invalid order.");
             using var scope = new TransactionScope(TransactionScopeOption.Required);
 
-            // Decrease stock for all items in the order (only happens once at submission)
             var orderItems = _orderRepository.GetItemsByOrderId(orderId);
+            if (!orderItems.Any())
+                throw new InvalidOperationException("Order cannot be empty. Add items before sending.");
             foreach (var item in orderItems)
             {
                 _orderRepository.DecreaseStock(item.MenuItem.MenuItemId, item.Quantity);

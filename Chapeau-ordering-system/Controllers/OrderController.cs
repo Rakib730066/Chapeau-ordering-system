@@ -38,25 +38,16 @@ namespace Chapeau_ordering_system.Controllers
         public IActionResult LoadOrder(int tableId)
         {
             if (WaiterGuard() is { } r) return r;
-            var order = _orderService.GetOrderByTableId(tableId);
-            if (order == null)
+            try
             {
-                // No open order — previous orders were already sent; start a new round
-                try
-                {
-                    SetOrderSession(_orderService.StartOrder(tableId, EmployeeId!.Value));
-                }
-                catch (InvalidOperationException ex)
-                {
-                    SetError(ex.Message);
-                    return RedirectToAction(nameof(Menu), new { tableId });
-                }
+                SetOrderSession(_orderService.GetOrCreateOrder(tableId, EmployeeId!.Value));
+                return RedirectToAction(nameof(TakeOrder), new { tableId });
             }
-            else
+            catch (InvalidOperationException ex)
             {
-                SetOrderSession(order.OrderId);
+                SetError(ex.Message);
+                return RedirectToAction(nameof(Menu), new { tableId });
             }
-            return RedirectToAction(nameof(TakeOrder), new { tableId });
         }
 
         [HttpGet]
@@ -99,7 +90,6 @@ namespace Chapeau_ordering_system.Controllers
             if (orderId == 0) { SetError("No active order found."); return RedirectToAction(nameof(Menu), new { tableId }); }
             try
             {
-                EnsureOrderNotEmpty(orderId);
                 _orderService.SaveOrder(orderId);
                 ClearOrderSession();
                 SetSuccess("Order sent successfully to the kitchen.");
@@ -165,6 +155,20 @@ namespace Chapeau_ordering_system.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
+        public IActionResult MarkServed(int orderItemId, int tableId)
+        {
+            if (WaiterGuard() is { } r) return r;
+            try
+            {
+                string name = _orderService.GetItemNameByOrderItemId(orderItemId);
+                _orderService.MarkItemServed(orderItemId);
+                SetSuccess($"'{name}' marked as served.");
+            }
+            catch (InvalidOperationException ex) { SetError(ex.Message); }
+            return RedirectToAction(nameof(TakeOrder), new { tableId });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
         public IActionResult CancelOrder(int orderId, int tableId)
         {
             if (WaiterGuard() is { } r) return r;
@@ -187,6 +191,7 @@ namespace Chapeau_ordering_system.Controllers
             SentItems           = _orderService.GetSentItemsByTableId(tableId),
             OrderStatus         = _orderService.GetOrderById(orderId)?.Status ?? Models.Enums.OrderStatus.Open,
             Menu                = CreateMenuViewModel(tableId, type, course, card),
+            WaiterName          = HttpContext.Session.GetString("EmployeeName"),
             ConfirmationMessage = TempData["ConfirmMessage"] as string,
             ErrorMessage        = TempData["ErrorMessage"]   as string
         };
@@ -199,12 +204,6 @@ namespace Chapeau_ordering_system.Controllers
             ActiveCard   = card,
             TableId      = tableId
         };
-
-        private void EnsureOrderNotEmpty(int orderId)
-        {
-            if (!_orderService.GetItemsByOrderId(orderId).Any())
-                throw new InvalidOperationException("Order cannot be empty. Add items before sending.");
-        }
 
         private IActionResult RedirectToTakeOrder(int tableId, MenuItemType? type, CourseType? course, CardType? card) =>
             RedirectToAction(nameof(TakeOrder), new { tableId, type = (int?)type, course = (int?)course, card = (int?)card });

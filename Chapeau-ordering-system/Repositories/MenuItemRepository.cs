@@ -33,7 +33,7 @@ namespace Chapeau_ordering_system.Repositories
         public List<MenuItem> GetFiltered(MenuItemType? type, CourseType? course, CardType? card)
         {
             List<MenuItem> menuItems = new List<MenuItem>();
-            string query = "SELECT MenuItemId, Name, Price, Type, Course, Card, VatRate, Stock, IsActive FROM dbo.MenuItems WHERE 1=1";
+            string query = "SELECT MenuItemId, Name, Price, Type, Course, Card, VatRate, Stock, IsActive FROM dbo.MenuItems WHERE IsActive = 1";
 
             if (type.HasValue)   query += " AND Type = @Type";
             if (course.HasValue) query += " AND Course = @Course";
