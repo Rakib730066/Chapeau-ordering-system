@@ -21,6 +21,7 @@ namespace Chapeau_ordering_system.ViewModels
         public int     CurrentItemCount => CurrentItems.Sum(i => i.Quantity);
         public int     SentItemCount    => SentItems.Sum(i => i.Quantity);
         public decimal SentItemTotal    => SentItems.Sum(i => i.MenuItem!.Price * i.Quantity);
+        public decimal TableTotal       => SentItemTotal + TotalPrice;
 
         public string? ConfirmationMessage { get; set; }
         public string? ErrorMessage { get; set; }
