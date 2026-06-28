@@ -89,9 +89,9 @@ namespace Chapeau_ordering_system.Services
             var orderItems = _orderRepository.GetItemsByOrderId(orderId);
             if (!orderItems.Any())
                 throw new InvalidOperationException("Order cannot be empty. Add items before sending.");
-            foreach (var item in orderItems)
+            foreach (var item in orderItems.Where(i => i.MenuItem != null))
             {
-                _orderRepository.DecreaseStock(item.MenuItem.MenuItemId, item.Quantity);
+                _orderRepository.DecreaseStock(item.MenuItem!.MenuItemId, item.Quantity);
             }
 
             _orderRepository.UpdateOrderStatus(orderId, OrderStatus.Submitted);

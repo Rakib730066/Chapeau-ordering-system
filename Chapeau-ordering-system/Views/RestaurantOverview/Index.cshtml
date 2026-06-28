@@ -22,12 +22,6 @@
         </div>
     </div>
 
-    @if (TempData["Error"] is string err)
-    {
-        <div class="alert alert-danger alert-dismissible fade show">
-            @err <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
     @if (TempData["ErrorMessage"] is string errMsg)
     {
         <div class="alert alert-danger alert-dismissible fade show">

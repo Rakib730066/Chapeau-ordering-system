@@ -19,27 +19,33 @@ namespace Chapeau_ordering_system.Controllers
             return View(vm);
         }
 
-        [HttpPost] public IActionResult StartItem(int orderItemId) =>
+        [HttpPost, ValidateAntiForgeryToken]
+        public IActionResult StartItem(int orderItemId) =>
             ExecuteBarKitchenAction(() => _barKitchenService.MarkItemBeingPrepared(orderItemId),
                 "Order item started.", "Could not start the order item.");
 
-        [HttpPost] public IActionResult MarkItemReady(int orderItemId) =>
+        [HttpPost, ValidateAntiForgeryToken]
+        public IActionResult MarkItemReady(int orderItemId) =>
             ExecuteBarKitchenAction(() => _barKitchenService.MarkItemReady(orderItemId),
                 "Order item marked as ready.", "Could not mark the order item as ready.");
 
-        [HttpPost] public IActionResult StartOrder(int orderId) =>
+        [HttpPost, ValidateAntiForgeryToken]
+        public IActionResult StartOrder(int orderId) =>
             ExecuteBarKitchenAction(() => _barKitchenService.MarkOrderBeingPrepared(orderId),
                 "Order started.", "Could not start the order.");
 
-        [HttpPost] public IActionResult MarkOrderReady(int orderId) =>
+        [HttpPost, ValidateAntiForgeryToken]
+        public IActionResult MarkOrderReady(int orderId) =>
             ExecuteBarKitchenAction(() => _barKitchenService.MarkOrderReadyToServe(orderId),
                 "Order marked as ready.", "Could not mark the order as ready.", "finished");
 
-        [HttpPost] public IActionResult StartCourse(int orderId, int courseType) =>
+        [HttpPost, ValidateAntiForgeryToken]
+        public IActionResult StartCourse(int orderId, int courseType) =>
             ExecuteBarKitchenAction(() => _barKitchenService.MarkCourseBeingPrepared(orderId, courseType),
                 "Course started.", "Could not start the course.");
 
-        [HttpPost] public IActionResult MarkCourseReady(int orderId, int courseType) =>
+        [HttpPost, ValidateAntiForgeryToken]
+        public IActionResult MarkCourseReady(int orderId, int courseType) =>
             ExecuteBarKitchenAction(() => _barKitchenService.MarkCourseReadyToServe(orderId, courseType),
                 "Course marked as ready.", "Could not mark the course as ready.");
 

@@ -186,6 +186,12 @@ namespace Chapeau_ordering_system.Controllers
         public IActionResult CancelOrder(int orderId, int tableId)
         {
             if (WaiterGuard() is { } r) return r;
+            int sessionOrderId = GetOrderSession();
+            if (sessionOrderId == 0 || sessionOrderId != orderId)
+            {
+                SetError("Cannot cancel: order does not match your active session.");
+                return RedirectToAction(nameof(TakeOrder), new { tableId });
+            }
             try
             {
                 _orderService.CancelOrder(orderId, tableId);

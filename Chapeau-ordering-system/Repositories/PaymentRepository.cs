@@ -91,11 +91,11 @@ namespace Chapeau_ordering_system.Repositories
                 WHERE o.TableId = @TableId AND o.Status IN (@OpenStatus, @SubmittedStatus)
                 ORDER BY o.OrderId, mi.Name";
 
-            SqlCommand cmd = new SqlCommand(query, conn);
+            using SqlCommand cmd = new SqlCommand(query, conn);
             cmd.Parameters.Add("@TableId", SqlDbType.Int).Value = tableId;
             cmd.Parameters.Add("@OpenStatus", SqlDbType.Int).Value = (int)OrderStatus.Open;
             cmd.Parameters.Add("@SubmittedStatus", SqlDbType.Int).Value = (int)OrderStatus.Submitted;
-            return cmd.ExecuteReader();
+            return cmd.ExecuteReader(CommandBehavior.CloseConnection);
         }
 
         private Order? BuildOrderFromReader(SqlDataReader reader)
@@ -183,10 +183,14 @@ namespace Chapeau_ordering_system.Repositories
 
         private void MarkOrderAsPaid(SqlConnection conn, SqlTransaction transaction, int orderId)
         {
-            using SqlCommand cmd = new SqlCommand(
-                "UPDATE dbo.Orders SET Status = @Paid WHERE OrderId = @OrderId", conn, transaction);
+            using SqlCommand cmd = new SqlCommand(@"
+                UPDATE dbo.Orders SET Status = @Paid
+                WHERE TableId = (SELECT TableId FROM dbo.Orders WHERE OrderId = @OrderId)
+                  AND Status IN (@Open, @Submitted)", conn, transaction);
             cmd.Parameters.Add("@Paid", SqlDbType.Int).Value = (int)OrderStatus.Paid;
             cmd.Parameters.Add("@OrderId", SqlDbType.Int).Value = orderId;
+            cmd.Parameters.Add("@Open", SqlDbType.Int).Value = (int)OrderStatus.Open;
+            cmd.Parameters.Add("@Submitted", SqlDbType.Int).Value = (int)OrderStatus.Submitted;
             cmd.ExecuteNonQuery();
         }
 
