@@ -23,7 +23,7 @@ BEGIN
         Status         INT           NOT NULL DEFAULT(0),
         CurrentOrderId INT           NULL,
         OccupiedSince  DATETIME2     NULL,
-        LastUpdated    DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
+        LastUpdated    DATETIME2     NOT NULL DEFAULT GETDATE(),
         Area           NVARCHAR(100) NULL,
         IsActive       BIT           NOT NULL DEFAULT(1),
         ReservationName NVARCHAR(100) NULL,
@@ -47,16 +47,16 @@ IF NOT EXISTS (SELECT 1 FROM dbo.Tables)
 BEGIN
     INSERT INTO dbo.Tables (TableNumber, NumberOfSeats, Status, LastUpdated, IsActive)
     VALUES
-    ('T1',  4, 0, SYSUTCDATETIME(), 1),
-    ('T2',  4, 0, SYSUTCDATETIME(), 1),
-    ('T3',  4, 0, SYSUTCDATETIME(), 1),
-    ('T4',  4, 0, SYSUTCDATETIME(), 1),
-    ('T5',  4, 0, SYSUTCDATETIME(), 1),
-    ('T6',  4, 0, SYSUTCDATETIME(), 1),
-    ('T7',  4, 0, SYSUTCDATETIME(), 1),
-    ('T8',  4, 0, SYSUTCDATETIME(), 1),
-    ('T9',  4, 0, SYSUTCDATETIME(), 1),
-    ('T10', 4, 0, SYSUTCDATETIME(), 1);
+    ('T1',  4, 0, GETDATE(), 1),
+    ('T2',  4, 0, GETDATE(), 1),
+    ('T3',  4, 0, GETDATE(), 1),
+    ('T4',  4, 0, GETDATE(), 1),
+    ('T5',  4, 0, GETDATE(), 1),
+    ('T6',  4, 0, GETDATE(), 1),
+    ('T7',  4, 0, GETDATE(), 1),
+    ('T8',  4, 0, GETDATE(), 1),
+    ('T9',  4, 0, GETDATE(), 1),
+    ('T10', 4, 0, GETDATE(), 1);
 END
 GO
 

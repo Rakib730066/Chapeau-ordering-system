@@ -57,9 +57,9 @@ namespace Chapeau_ordering_system.Repositories
                                    SET Status = @status,
                                        CurrentOrderId = @orderId,
                                        ReservationName = @reservationName,
-                                       LastUpdated = SYSUTCDATETIME(),
+                                       LastUpdated = GETDATE(),
                                        OccupiedSince = CASE
-                                           WHEN @status = 1 THEN ISNULL(OccupiedSince, SYSUTCDATETIME())
+                                           WHEN @status = 1 THEN ISNULL(OccupiedSince, GETDATE())
                                            ELSE NULL
                                        END
                                    WHERE TableId = @id";
