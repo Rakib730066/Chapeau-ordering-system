@@ -7,6 +7,7 @@ namespace Chapeau_ordering_system.Services.Interfaces
         IEnumerable<Order> GetOpenOrders();
 
         int StartOrder(int tableId, int employeeId);
+        int GetOrCreateOrder(int tableId, int employeeId);
 
         void AddItemToOrder(int orderId, int menuItemId);
 
