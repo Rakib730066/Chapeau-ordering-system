@@ -15,5 +15,8 @@ namespace Chapeau_ordering_system.Models
         public bool IsActive { get; set; } = true;
 
         public bool IsFree => Status == TableStatus.Free;
+        public int? MinutesSinceOccupied => OccupiedSince.HasValue
+            ? Infrastructure.AppClock.MinutesSince(OccupiedSince.Value)
+            : null;
     }
 }

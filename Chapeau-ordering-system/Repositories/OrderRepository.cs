@@ -37,6 +37,7 @@ namespace Chapeau_ordering_system.Repositories
                 LEFT  JOIN dbo.OrderItems oi ON oi.OrderId   = o.OrderId
                 LEFT  JOIN dbo.MenuItems  mi ON mi.MenuItemId = oi.MenuItemId
                 WHERE o.Status IN (1, 2)
+                AND   CAST(o.OrderTime AS DATE) = CAST(GETDATE() AS DATE)
                 ORDER BY o.OrderId, oi.OrderItemId";
 
             try
@@ -183,7 +184,8 @@ namespace Chapeau_ordering_system.Repositories
                 INNER JOIN dbo.Tables    t ON t.TableId    = o.TableId
                 INNER JOIN dbo.Employees e ON e.EmployeeId = o.EmployeeId
                 WHERE o.TableId = @TableId
-                AND   o.Status  = 1
+                AND   o.Status = 1
+                AND   CAST(o.OrderTime AS DATE) = CAST(GETDATE() AS DATE)
                 ORDER BY o.OrderTime DESC";
 
             try
@@ -367,7 +369,7 @@ namespace Chapeau_ordering_system.Repositories
 
             const string cancelOrder = @"
                 UPDATE dbo.Orders
-                SET    Status = 3
+                SET    Status = 4
                 WHERE  OrderId = @OrderId";
 
             try
@@ -582,6 +584,35 @@ namespace Chapeau_ordering_system.Repositories
 
             conn.Open();
             return (int)cmd.ExecuteScalar() > 0;
+        }
+
+        public List<OrderItem> GetSentItemsByTableId(int tableId)
+        {
+            var items = new List<OrderItem>();
+            const string query = @"
+                SELECT oi.OrderItemId, oi.Quantity, oi.Comment, oi.Status, oi.OrderTime,
+                       mi.MenuItemId, mi.Name, mi.Price, mi.Type, mi.Course, mi.Stock
+                FROM dbo.OrderItems oi
+                INNER JOIN dbo.Orders o  ON o.OrderId    = oi.OrderId
+                INNER JOIN dbo.MenuItems mi ON mi.MenuItemId = oi.MenuItemId
+                WHERE o.TableId = @TableId
+                  AND o.Status  = 2
+                  AND CAST(o.OrderTime AS DATE) = CAST(GETDATE() AS DATE)
+                  AND oi.Status != 5
+                ORDER BY oi.OrderTime";
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                using var cmd  = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@TableId", tableId);
+                conn.Open();
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                    items.Add(MapOrderItemWithMenuItem(reader));
+            }
+            catch (SqlException) { }
+            return items;
         }
 
         private static OrderItem MapOrderItemWithMenuItem(SqlDataReader reader)

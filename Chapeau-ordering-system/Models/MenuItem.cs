@@ -14,5 +14,6 @@ namespace Chapeau_ordering_system.Models
         public bool IsActive { get; set; } = true;
         public bool IsOutOfStock => Stock <= 0;
         public bool IsLowStock => Stock > 0 && Stock <= 10;
+        public int VatRatePercent => (int)(VatRate * 100);
     }
 }

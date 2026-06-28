@@ -10,6 +10,7 @@ namespace Chapeau_ordering_system.Repositories.Interfaces
         Order? GetOrderById(int orderId);
         Order? GetOrderByTableId(int tableId);
         List<OrderItem> GetItemsByOrderId(int orderId);
+        List<OrderItem> GetSentItemsByTableId(int tableId);
         OrderItem? GetOrderItemById(int orderItemId);
         OrderItem? GetOrderItemByOrderAndMenuItem(int orderId, int menuItemId);
         MenuItem? GetMenuItemById(int menuItemId);

@@ -88,15 +88,14 @@ namespace Chapeau_ordering_system.Repositories
             INNER JOIN Tables t ON o.TableId = t.TableId
             INNER JOIN Employees e ON o.EmployeeId = e.EmployeeId
             WHERE mi.Type = @MenuItemType
-            AND o.Status IN (@OpenStatus, @SubmittedStatus)
-            AND oi.Status IN (@OrderedStatus, @BeingPreparedStatus) -- recommendation
+            AND o.Status = @SubmittedStatus
+            AND oi.Status IN (@OrderedStatus, @BeingPreparedStatus)
             ORDER BY o.OrderTime ASC";
 
                 using (SqlConnection connection = new SqlConnection(_connectionString))
                 using (SqlCommand command = new SqlCommand(query, connection))
                 {
                     command.Parameters.AddWithValue("@MenuItemType", (int)menuItemType);
-                    command.Parameters.AddWithValue("@OpenStatus", (int)OrderStatus.Open);
                     command.Parameters.AddWithValue("@SubmittedStatus", (int)OrderStatus.Submitted);
                     command.Parameters.AddWithValue("@OrderedStatus", (int)OrderItemStatus.Ordered);
                     command.Parameters.AddWithValue("@BeingPreparedStatus", (int)OrderItemStatus.BeingPrepared);
@@ -156,8 +155,8 @@ namespace Chapeau_ordering_system.Repositories
                     INNER JOIN Tables t ON o.TableId = t.TableId
                     INNER JOIN Employees e ON o.EmployeeId = e.EmployeeId
                     WHERE mi.Type = @MenuItemType
-                    AND o.Status IN (@OpenStatus, @SubmittedStatus)
-                    AND oi.Status IN (@ReadyToBeServedStatus, @ServedStatus)  -- recommendation
+                    AND o.Status = @SubmittedStatus
+                    AND oi.Status IN (@ReadyToBeServedStatus, @ServedStatus)
                     AND oi.ReadyAt >= @TodayStart
                     AND oi.ReadyAt < @TomorrowStart
                     ORDER BY oi.ReadyAt ASC";
@@ -166,7 +165,6 @@ namespace Chapeau_ordering_system.Repositories
                 using (SqlCommand command = new SqlCommand(query, connection))
                 {
                     command.Parameters.AddWithValue("@MenuItemType", (int)menuItemType);
-                    command.Parameters.AddWithValue("@OpenStatus", (int)OrderStatus.Open);
                     command.Parameters.AddWithValue("@SubmittedStatus", (int)OrderStatus.Submitted);
                     command.Parameters.AddWithValue("@ReadyToBeServedStatus", (int)OrderItemStatus.ReadyToBeServed);
                     command.Parameters.AddWithValue("@ServedStatus", (int)OrderItemStatus.Served);

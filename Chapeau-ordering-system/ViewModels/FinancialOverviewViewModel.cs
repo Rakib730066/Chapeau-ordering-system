@@ -17,6 +17,12 @@ namespace Chapeau_ordering_system.ViewModels
         public int TotalOrders { get; set; }
 
         public List<DailyRevenueLine> DailyBreakdown { get; set; } = new();
+
+        // Quick-range dates for the filter shortcut buttons
+        public DateTime Today        => DateTime.Today;
+        public DateTime MonthStart   => new DateTime(Today.Year, Today.Month, 1);
+        public DateTime QuarterStart => new DateTime(Today.Year, ((Today.Month - 1) / 3) * 3 + 1, 1);
+        public DateTime YearStart    => new DateTime(Today.Year, 1, 1);
     }
 
     public class DailyRevenueLine

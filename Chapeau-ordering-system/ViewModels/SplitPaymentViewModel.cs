@@ -24,6 +24,10 @@ namespace Chapeau_ordering_system.ViewModels
         [Range(2, 20, ErrorMessage = "Number of people must be between 2 and 20.")]
         public int NumberOfPeople { get; set; } = 2;
         public List<PersonPaymentViewModel> Payments { get; set; } = new List<PersonPaymentViewModel>();
+
+        public decimal SumSoFar      => Payments?.Sum(p => p.AmountPaid) ?? 0m;
+        public decimal Remaining     => Math.Max(TotalToPay - SumSoFar, 0m);
+        public decimal PerPersonShare => NumberOfPeople > 0 ? Math.Round(TotalToPay / NumberOfPeople, 2) : 0m;
     }
 
     public class PersonPaymentViewModel
