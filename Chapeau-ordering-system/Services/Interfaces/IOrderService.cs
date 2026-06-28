@@ -33,6 +33,7 @@ namespace Chapeau_ordering_system.Services.Interfaces
         bool TableHasUnservedItems(int tableId);
 
         void MarkItemServed(int orderItemId);
+        void MarkItemBeingPrepared(int orderItemId);
 
         string GetItemNameById(int menuItemId);
         string GetItemNameByOrderItemId(int orderItemId);

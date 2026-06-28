@@ -2,7 +2,7 @@
 @using Chapeau_ordering_system.Models.Enums
 
 @{
-    ViewData["Title"] = "Take Order";
+    ViewData["Title"] = $"Take Order — Table {Model.Menu.TableId}";
 }
 
 
@@ -238,7 +238,15 @@
                                         </td>
                                         <td>
                                             <span class="badge @item.StatusBadgeClass" style="font-size:.65rem">@item.Status</span>
-                                            @if (item.CanBeServed)
+                                            @if (item.CanBeStarted)
+                                            {
+                                                <form asp-action="MarkBeingPrepared" method="post" class="mt-1">
+                                                    <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
+                                                    <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
+                                                    <button type="submit" class="btn btn-warning btn-sm px-2 py-0" style="font-size:.65rem">▶ Prepare</button>
+                                                </form>
+                                            }
+                                            else if (item.CanBeServed)
                                             {
                                                 <form asp-action="MarkServed" method="post" class="mt-1">
                                                     <input type="hidden" name="orderItemId" value="@item.OrderItemId" />

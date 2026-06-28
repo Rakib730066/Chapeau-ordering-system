@@ -22,7 +22,8 @@ namespace Chapeau_ordering_system.Services
         public List<OrderItem> GetItemsByOrderId(int orderId) => _orderRepository.GetItemsByOrderId(orderId);
         public List<OrderItem> GetSentItemsByTableId(int tableId) => _orderRepository.GetSentItemsByTableId(tableId);
         public bool TableHasUnservedItems(int tableId) => _orderRepository.TableHasUnservedItems(tableId);
-        public void MarkItemServed(int orderItemId) => _orderRepository.UpdateOrderItemStatus(orderItemId, OrderItemStatus.Served);
+        public void MarkItemServed(int orderItemId)        => _orderRepository.UpdateOrderItemStatus(orderItemId, OrderItemStatus.Served);
+        public void MarkItemBeingPrepared(int orderItemId) => _orderRepository.UpdateOrderItemStatus(orderItemId, OrderItemStatus.BeingPrepared);
         public void UpdateItemComment(int orderItemId, string? comment) => _orderRepository.UpdateOrderItemComment(orderItemId, comment);
         public string GetItemNameById(int menuItemId) => _orderRepository.GetMenuItemById(menuItemId)?.Name ?? "Item";
         public string GetItemNameByOrderItemId(int orderItemId) => _orderRepository.GetOrderItemById(orderItemId)?.MenuItem?.Name ?? "Item";
