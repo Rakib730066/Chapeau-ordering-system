@@ -69,20 +69,20 @@
             </div>
         </div>
 
-        @if (Model.Mode == SplitMode.Equal)
-        {
-            <div class="mb-3">
-                <label asp-for="NumberOfPeople" class="form-label">Number of people</label>
-                <input asp-for="NumberOfPeople" type="number" min="2" max="20" class="form-control" style="max-width: 200px;" />
-                <span asp-validation-for="NumberOfPeople" class="text-danger"></span>
-                <button type="submit" name="action" value="recalc" class="btn btn-sm btn-outline-primary mt-2">
-                    Update split
-                </button>
+        <div class="mb-3">
+            <label asp-for="NumberOfPeople" class="form-label">Number of people</label>
+            <input asp-for="NumberOfPeople" type="number" min="2" max="20" class="form-control" style="max-width: 200px;" />
+            <span asp-validation-for="NumberOfPeople" class="text-danger"></span>
+            <button type="submit" name="action" value="recalc" class="btn btn-sm btn-outline-primary mt-2">
+                Update split
+            </button>
+            @if (Model.Mode == SplitMode.Equal)
+            {
                 <div class="form-text">
                     Each person's share: €@Model.PerPersonShare.ToString("0.00")
                 </div>
-            </div>
-        }
+            }
+        </div>
 
         <h5 class="mt-4">Per-person payments</h5>
         <p class="text-muted small">
