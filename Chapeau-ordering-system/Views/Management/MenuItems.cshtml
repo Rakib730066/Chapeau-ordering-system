@@ -75,7 +75,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (var item in Model.OrderBy(i => i.Card).ThenBy(i => i.Course).ThenBy(i => i.Name))
+            @foreach (var item in Model)
             {
                 <tr class="@(!item.IsActive ? "table-secondary text-muted" : item.IsOutOfStock ? "table-danger" : item.IsLowStock ? "table-warning" : "")">
                     <td>@item.Name</td>
@@ -83,7 +83,7 @@
                     <td>@item.Type</td>
                     <td>@item.Course</td>
                     <td>€@item.Price.ToString("F2")</td>
-                    <td>@((item.VatRate * 100).ToString("0"))%</td>
+                    <td>@item.VatRatePercent%</td>
                     <td>
                         <!-- inline stock edit -->
                         <form asp-action="UpdateStock" method="post" class="d-flex gap-1" style="min-width:100px">

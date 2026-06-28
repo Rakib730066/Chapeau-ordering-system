@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Chapeau_ordering_system</RootNamespace>
+    <RazorSourceGeneratorConcurrent>false</RazorSourceGeneratorConcurrent>
   </PropertyGroup>
 
   <ItemGroup>

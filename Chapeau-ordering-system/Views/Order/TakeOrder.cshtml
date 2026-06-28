@@ -1,142 +1,165 @@
-﻿@model Chapeau_ordering_system.ViewModels.TakeOrderViewModel
+@model Chapeau_ordering_system.ViewModels.TakeOrderViewModel
 @using Chapeau_ordering_system.Models.Enums
 
 @{
     ViewData["Title"] = "Take Order";
 }
 
-<div class="container-fluid mt-4">
+<style>
+    .menu-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 12px;
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+        transition: box-shadow .15s;
+    }
+    .menu-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+    .menu-card.out-of-stock { background: #fff5f5; border-color: #f5c6cb; }
+    .menu-card .item-name { font-weight: 600; font-size: .9rem; margin-bottom: 4px; }
+    .menu-card .item-price { font-size: 1rem; font-weight: 700; color: #0d6efd; }
+    .section-title {
+        font-size: .75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        color: #6c757d;
+        border-bottom: 2px solid #dee2e6;
+        padding-bottom: 4px;
+        margin: 16px 0 10px;
+    }
+</style>
+
+<div class="container-fluid mt-3">
 
     @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
     {
-        <div class="alert alert-danger">
-            @Model.ErrorMessage
+        <div class="alert alert-danger alert-dismissible fade show">
+            @Model.ErrorMessage <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     }
-
     @if (!string.IsNullOrWhiteSpace(Model.ConfirmationMessage))
     {
-        <div class="alert alert-success">
-            @Model.ConfirmationMessage
+        <div class="alert alert-success alert-dismissible fade show">
+            @Model.ConfirmationMessage <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     }
 
-    <div class="row">
+    <div class="row g-3">
 
-        @* ── LEFT: Menu items to pick from ── *@
-        <div class="col-md-7">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4>Menu — Table @Model.Menu.TableId</h4>
+        @* ── LEFT: Menu ── *@
+        <div class="col-lg-8">
+
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0 fw-bold">Menu — Table @Model.Menu.TableId</h5>
                 <a asp-controller="RestaurantOverview" asp-action="Index"
                    class="btn btn-outline-secondary btn-sm">&larr; Back</a>
             </div>
 
-            @* Type filter (Food / Drinks) *@
-            <div class="mb-2">
-                <a asp-action="TakeOrder" asp-route-tableId="@Model.Menu.TableId"
-                   asp-route-card="@((int?)Model.Menu.ActiveCard)"
-                   class="btn btn-sm @(Model.Menu.ActiveType == null ? "btn-dark" : "btn-outline-dark") me-1">All</a>
-                <a asp-action="TakeOrder" asp-route-tableId="@Model.Menu.TableId"
-                   asp-route-type="@((int)MenuItemType.Food)"
-                   asp-route-card="@((int?)Model.Menu.ActiveCard)"
-                   class="btn btn-sm @(Model.Menu.ActiveType == MenuItemType.Food ? "btn-dark" : "btn-outline-dark") me-1">Food</a>
-                <a asp-action="TakeOrder" asp-route-tableId="@Model.Menu.TableId"
-                   asp-route-type="@((int)MenuItemType.Drink)"
-                   asp-route-card="@((int?)Model.Menu.ActiveCard)"
-                   class="btn btn-sm @(Model.Menu.ActiveType == MenuItemType.Drink ? "btn-dark" : "btn-outline-dark") me-1">Drinks</a>
-            </div>
+            @* ── Filter row: Type | Card | Course ── *@
+            <div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
 
-            @* Card filter *@
-            <div class="mb-2">
-                <a asp-action="TakeOrder" asp-route-tableId="@Model.Menu.TableId"
-                   asp-route-type="@((int?)Model.Menu.ActiveType)"
-                   asp-route-course="@((int?)Model.Menu.ActiveCourse)"
-                   class="btn btn-sm @(Model.Menu.ActiveCard == null ? "btn-dark" : "btn-outline-dark") me-1">All Cards</a>
-                @foreach (CardType cardType in Enum.GetValues<CardType>())
-                {
+                @* Type *@
+                <div class="btn-group btn-group-sm" role="group">
+                    <a asp-action="TakeOrder" asp-route-tableId="@Model.Menu.TableId"
+                       asp-route-card="@((int?)Model.Menu.ActiveCard)"
+                       class="btn @(Model.Menu.ActiveType == null ? "btn-dark" : "btn-outline-dark")">All</a>
+                    <a asp-action="TakeOrder" asp-route-tableId="@Model.Menu.TableId"
+                       asp-route-type="@((int)MenuItemType.Food)"
+                       asp-route-card="@((int?)Model.Menu.ActiveCard)"
+                       class="btn @(Model.Menu.ActiveType == MenuItemType.Food ? "btn-dark" : "btn-outline-dark")">Food</a>
+                    <a asp-action="TakeOrder" asp-route-tableId="@Model.Menu.TableId"
+                       asp-route-type="@((int)MenuItemType.Drink)"
+                       asp-route-card="@((int?)Model.Menu.ActiveCard)"
+                       class="btn @(Model.Menu.ActiveType == MenuItemType.Drink ? "btn-dark" : "btn-outline-dark")">Drinks</a>
+                </div>
+
+                <span class="text-muted">|</span>
+
+                @* Card *@
+                <div class="btn-group btn-group-sm" role="group">
                     <a asp-action="TakeOrder" asp-route-tableId="@Model.Menu.TableId"
                        asp-route-type="@((int?)Model.Menu.ActiveType)"
                        asp-route-course="@((int?)Model.Menu.ActiveCourse)"
-                       asp-route-card="@((int)cardType)"
-                       class="btn btn-sm @(Model.Menu.ActiveCard == cardType ? "btn-dark" : "btn-outline-dark") me-1">@cardType</a>
-                }
-            </div>
-
-            @* Course filter *@
-            @if (Model.Menu.ActiveType == null || Model.Menu.ActiveType == MenuItemType.Food)
-            {
-                <div class="mb-3">
-                    <a asp-action="TakeOrder" asp-route-tableId="@Model.Menu.TableId"
-                       asp-route-type="@((int?)Model.Menu.ActiveType)"
-                       class="btn btn-sm @(Model.Menu.ActiveCourse == null ? "btn-secondary" : "btn-outline-secondary") me-1">All courses</a>
-                    @foreach (CourseType course in Enum.GetValues<CourseType>().Where(c => c != CourseType.None))
+                       class="btn @(Model.Menu.ActiveCard == null ? "btn-primary" : "btn-outline-primary")">All Cards</a>
+                    @foreach (CardType cardType in Enum.GetValues<CardType>())
                     {
                         <a asp-action="TakeOrder" asp-route-tableId="@Model.Menu.TableId"
                            asp-route-type="@((int?)Model.Menu.ActiveType)"
-                           asp-route-course="@((int)course)"
-                           class="btn btn-sm @(Model.Menu.ActiveCourse == course ? "btn-secondary" : "btn-outline-secondary") me-1">@course</a>
+                           asp-route-course="@((int?)Model.Menu.ActiveCourse)"
+                           asp-route-card="@((int)cardType)"
+                           class="btn @(Model.Menu.ActiveCard == cardType ? "btn-primary" : "btn-outline-primary")">@cardType</a>
                     }
                 </div>
-            }
 
-            @* Menu items table *@
-            <table class="table table-hover table-sm align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th>Item</th>
-                        <th class="text-end">Price</th>
-                        <th class="text-center">Stock</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @{
-                        var menuItems = Model.Menu.MenuItems;
-                    }
-
-                    @if (Model.Menu.ActiveType == null)
-                    {
-                        var typeGroups = menuItems.GroupBy(item => item.Type)
-                            .OrderBy(group => group.Key);
-
-                        foreach (var typeGroup in typeGroups)
+                @* Course — only when food is active *@
+                @if (Model.Menu.ActiveType == null || Model.Menu.ActiveType == MenuItemType.Food)
+                {
+                    <span class="text-muted">|</span>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a asp-action="TakeOrder" asp-route-tableId="@Model.Menu.TableId"
+                           asp-route-type="@((int?)Model.Menu.ActiveType)"
+                           asp-route-card="@((int?)Model.Menu.ActiveCard)"
+                           class="btn @(Model.Menu.ActiveCourse == null ? "btn-secondary" : "btn-outline-secondary")">All Courses</a>
+                        @foreach (CourseType course in Model.Menu.DisplayCourses)
                         {
-                            <tr class="menu-section">
-                                <td colspan="4">@typeGroup.Key</td>
-                            </tr>
+                            <a asp-action="TakeOrder" asp-route-tableId="@Model.Menu.TableId"
+                               asp-route-type="@((int?)Model.Menu.ActiveType)"
+                               asp-route-card="@((int?)Model.Menu.ActiveCard)"
+                               asp-route-course="@((int)course)"
+                               class="btn @(Model.Menu.ActiveCourse == course ? "btn-secondary" : "btn-outline-secondary")">@course</a>
+                        }
+                    </div>
+                }
+            </div>
 
-                            if (typeGroup.Key == MenuItemType.Food)
-                            {
-                                var courseGroups = typeGroup.GroupBy(item => item.Course)
-                                    .Where(group => group.Key != CourseType.None)
-                                    .OrderBy(group => group.Key);
+            @* ── Card grid ── *@
+            @foreach (var typeGroup in Model.Menu.ItemsByType)
+            {
+                @if (Model.Menu.ActiveType == null)
+                {
+                    <div class="section-title">@typeGroup.Key</div>
+                }
 
-                                foreach (var courseGroup in courseGroups)
+                @if (typeGroup.Key == MenuItemType.Food)
+                {
+                    var byCourse = typeGroup
+                        .GroupBy(i => i.Course)
+                        .Where(g => Model.Menu.DisplayCourses.Contains(g.Key))
+                        .OrderBy(g => g.Key);
+
+                    @foreach (var courseGroup in byCourse)
+                    {
+                        @if (Model.Menu.ActiveCourse == null || Model.Menu.ActiveCourse == courseGroup.Key)
+                        {
+                            <div class="section-title">@courseGroup.Key</div>
+                            <div class="row row-cols-2 row-cols-md-3 g-2 mb-2">
+                                @foreach (var item in courseGroup)
                                 {
-                                    <tr class="menu-subsection">
-                                        <td colspan="4">@courseGroup.Key</td>
-                                    </tr>
-
-                                    foreach (var item in courseGroup)
-                                    {
-                                        <tr class="@(item.IsOutOfStock ? "table-danger" : "")">
-                                            <td><span class="fw-semibold">@item.Name</span></td>
-                                            <td class="text-end">&euro; @item.Price.ToString("0.00")</td>
-                                            <td class="text-center">
-                                                @if (item.IsOutOfStock)
-                                                {
-                                                    <span class="badge bg-danger">Out of stock</span>
-                                                }
-                                                else if (item.IsLowStock)
-                                                {
-                                                    <span class="badge bg-warning text-dark">Low (@item.Stock)</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="text-muted small">@item.Stock</span>
-                                                }
-                                            </td>
-                                            <td>
+                                    <div class="col">
+                                        <div class="menu-card @(item.IsOutOfStock ? "out-of-stock" : "")">
+                                            <div>
+                                                <div class="item-name">@item.Name</div>
+                                                <div class="d-flex justify-content-between align-items-center mt-1">
+                                                    <span class="item-price">&euro;@item.Price.ToString("0.00")</span>
+                                                    @if (item.IsOutOfStock)
+                                                    {
+                                                        <span class="badge bg-danger" style="font-size:.65rem">Out of stock</span>
+                                                    }
+                                                    else if (item.IsLowStock)
+                                                    {
+                                                        <span class="badge bg-warning text-dark" style="font-size:.65rem">Low (@item.Stock)</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted" style="font-size:.75rem">Stock: @item.Stock</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                            <div class="mt-2">
                                                 @if (!item.IsOutOfStock)
                                                 {
                                                     <form asp-action="AddItem" method="post">
@@ -145,97 +168,47 @@
                                                         <input type="hidden" name="type" value="@((int?)Model.Menu.ActiveType)" />
                                                         <input type="hidden" name="course" value="@((int?)Model.Menu.ActiveCourse)" />
                                                         <input type="hidden" name="card" value="@((int?)Model.Menu.ActiveCard)" />
-                                                        <button type="submit" class="btn btn-sm btn-primary">+ Add</button>
+                                                        <button type="submit" class="btn btn-primary btn-sm w-100">+ Add</button>
                                                     </form>
                                                 }
-                                            </td>
-                                        </tr>
-                                    }
+                                                else
+                                                {
+                                                    <button class="btn btn-secondary btn-sm w-100" disabled>Unavailable</button>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
                                 }
-                            }
-                            else
-                            {
-                                foreach (var item in typeGroup)
-                                {
-                                    <tr class="@(item.IsOutOfStock ? "table-danger" : "")">
-                                        <td><span class="fw-semibold">@item.Name</span></td>
-                                        <td class="text-end">&euro; @item.Price.ToString("0.00")</td>
-                                        <td class="text-center">
+                            </div>
+                        }
+                    }
+                }
+                else
+                {
+                    <div class="row row-cols-2 row-cols-md-3 g-2 mb-2">
+                        @foreach (var item in typeGroup)
+                        {
+                            <div class="col">
+                                <div class="menu-card @(item.IsOutOfStock ? "out-of-stock" : "")">
+                                    <div>
+                                        <div class="item-name">@item.Name</div>
+                                        <div class="d-flex justify-content-between align-items-center mt-1">
+                                            <span class="item-price">&euro;@item.Price.ToString("0.00")</span>
                                             @if (item.IsOutOfStock)
                                             {
-                                                <span class="badge bg-danger">Out of stock</span>
+                                                <span class="badge bg-danger" style="font-size:.65rem">Out of stock</span>
                                             }
                                             else if (item.IsLowStock)
                                             {
-                                                <span class="badge bg-warning text-dark">Low (@item.Stock)</span>
+                                                <span class="badge bg-warning text-dark" style="font-size:.65rem">Low (@item.Stock)</span>
                                             }
                                             else
                                             {
-                                                <span class="text-muted small">@item.Stock</span>
+                                                <span class="text-muted" style="font-size:.75rem">Stock: @item.Stock</span>
                                             }
-                                        </td>
-                                        <td>
-                                            @if (!item.IsOutOfStock)
-                                            {
-                                                <form asp-action="AddItem" method="post">
-                                                    <input type="hidden" name="menuItemId" value="@item.MenuItemId" />
-                                                    <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
-                                                    <input type="hidden" name="type" value="@((int?)Model.Menu.ActiveType)" />
-                                                    <input type="hidden" name="course" value="@((int?)Model.Menu.ActiveCourse)" />
-                                                    <button type="submit" class="btn btn-sm btn-primary">+ Add</button>
-                                                </form>
-                                            }
-                                        </td>
-                                    </tr>
-                                }
-                            }
-                        }
-                    }
-                    else if (Model.Menu.ActiveType == MenuItemType.Food)
-                    {
-                        if (Model.Menu.ActiveCourse != null)
-                        {
-                            <tr class="menu-subsection">
-                                <td colspan="4">@Model.Menu.ActiveCourse</td>
-                            </tr>
-                        }
-
-                        var courseGroups = Model.Menu.ActiveCourse == null
-                            ? menuItems.GroupBy(item => item.Course)
-                                .Where(group => group.Key != CourseType.None)
-                                .OrderBy(group => group.Key)
-                            : menuItems.Where(item => item.Course == Model.Menu.ActiveCourse)
-                                .GroupBy(item => item.Course);
-
-                        foreach (var courseGroup in courseGroups)
-                        {
-                            if (Model.Menu.ActiveCourse == null)
-                            {
-                                <tr class="menu-subsection">
-                                    <td colspan="4">@courseGroup.Key</td>
-                                </tr>
-                            }
-
-                            foreach (var item in courseGroup)
-                            {
-                                <tr class="@(item.IsOutOfStock ? "table-danger" : "")">
-                                    <td><span class="fw-semibold">@item.Name</span></td>
-                                    <td class="text-end">&euro; @item.Price.ToString("0.00")</td>
-                                    <td class="text-center">
-                                        @if (item.IsOutOfStock)
-                                        {
-                                            <span class="badge bg-danger">Out of stock</span>
-                                        }
-                                        else if (item.IsLowStock)
-                                        {
-                                            <span class="badge bg-warning text-dark">Low (@item.Stock)</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted small">@item.Stock</span>
-                                        }
-                                    </td>
-                                    <td>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
                                         @if (!item.IsOutOfStock)
                                         {
                                             <form asp-action="AddItem" method="post">
@@ -243,150 +216,206 @@
                                                 <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
                                                 <input type="hidden" name="type" value="@((int?)Model.Menu.ActiveType)" />
                                                 <input type="hidden" name="course" value="@((int?)Model.Menu.ActiveCourse)" />
-                                                <button type="submit" class="btn btn-sm btn-primary">+ Add</button>
+                                                <input type="hidden" name="card" value="@((int?)Model.Menu.ActiveCard)" />
+                                                <button type="submit" class="btn btn-primary btn-sm w-100">+ Add</button>
                                             </form>
                                         }
-                                    </td>
-                                </tr>
-                            }
+                                        else
+                                        {
+                                            <button class="btn btn-secondary btn-sm w-100" disabled>Unavailable</button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
                         }
-                    }
-                    else
-                    {
-                        foreach (var item in menuItems)
-                        {
-                            <tr class="@(item.IsOutOfStock ? "table-danger" : "")">
-                                <td><span class="fw-semibold">@item.Name</span></td>
-                                <td class="text-end">&euro; @item.Price.ToString("0.00")</td>
-                                <td class="text-center">
-                                    @if (item.IsOutOfStock)
-                                    {
-                                        <span class="badge bg-danger">Out of stock</span>
-                                    }
-                                    else if (item.IsLowStock)
-                                    {
-                                        <span class="badge bg-warning text-dark">Low (@item.Stock)</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted small">@item.Stock</span>
-                                    }
-                                </td>
-                                <td>
-                                    @if (!item.IsOutOfStock)
-                                    {
-                                        <form asp-action="AddItem" method="post">
-                                            <input type="hidden" name="menuItemId" value="@item.MenuItemId" />
-                                            <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
-                                            <input type="hidden" name="type" value="@((int?)Model.Menu.ActiveType)" />
-                                            <input type="hidden" name="course" value="@((int?)Model.Menu.ActiveCourse)" />
-                                            <button type="submit" class="btn btn-sm btn-primary">+ Add</button>
-                                        </form>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    }
-                </tbody>
-            </table>
+                    </div>
+                }
+            }
+
         </div>
 
-        @* ── RIGHT: Current order running list ── *@
-        <div class="col-md-5">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Current Order</h5>
-                </div>
-                <div class="card-body">
-                    @if (!Model.CurrentItems.Any())
-                    {
-                        <p class="text-muted">No items added yet.</p>
-                    }
-                    else
-                    {
-                        <table class="table table-sm align-middle">
-                            <thead>
-                                <tr>
-                                    <th>Item</th>
-                                    <th class="text-center">Qty</th>
-                                    <th class="text-end">Subtotal</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
+        @* ── RIGHT: Order History + New Order ── *@
+        <div class="col-lg-4">
+
+            @* ── Order History (already sent) ── *@
+            @if (Model.SentItems.Any())
+            {
+                <div class="card mb-3" style="border-color:#6c757d">
+                    <div class="card-header py-2 d-flex justify-content-between align-items-center" style="background:#6c757d;color:#fff">
+                        <h6 class="mb-0 fw-bold">Order History</h6>
+                        <span class="badge bg-light text-dark">@Model.SentItemCount sent</span>
+                    </div>
+                    <div class="card-body p-2">
+                        <table class="table table-sm align-middle mb-0">
                             <tbody>
-                                @foreach (var item in Model.CurrentItems)
+                                @foreach (var item in Model.SentItems)
                                 {
+                                    string badgeClass = item.Status switch {
+                                        Chapeau_ordering_system.Models.Enums.OrderItemStatus.Ordered         => "bg-primary",
+                                        Chapeau_ordering_system.Models.Enums.OrderItemStatus.BeingPrepared   => "bg-warning text-dark",
+                                        Chapeau_ordering_system.Models.Enums.OrderItemStatus.ReadyToBeServed => "bg-success",
+                                        Chapeau_ordering_system.Models.Enums.OrderItemStatus.Served          => "bg-secondary",
+                                        _ => "bg-secondary"
+                                    };
                                     <tr>
-                                        <td>@item.MenuItem?.Name</td>
-                                        <td class="text-center">
-                                            @* Decrease button *@
-                                            <form asp-action="DecreaseItem" method="post" class="d-inline">
-                                                <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
-                                                <input type="hidden" name="currentQuantity" value="@item.Quantity" />
-                                                <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
-                                                <button type="submit" class="btn btn-sm btn-outline-secondary">-</button>
-                                            </form>
-                                            <span class="mx-1">@item.Quantity</span>
-                                            @* Increase button *@
-                                            <form asp-action="IncreaseItem" method="post" class="d-inline">
-                                                <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
-                                                <input type="hidden" name="currentQuantity" value="@item.Quantity" />
-                                                <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
-                                                <button type="submit" class="btn btn-sm btn-outline-secondary">+</button>
-                                            </form>
+                                        <td style="max-width:130px">
+                                            <div class="fw-semibold" style="font-size:.85rem">@item.MenuItem?.Name</div>
+                                            @if (!string.IsNullOrWhiteSpace(item.Comment))
+                                            {
+                                                <div class="text-muted" style="font-size:.7rem">@item.Comment</div>
+                                            }
                                         </td>
-                                        <td class="text-end">&euro; @((item.MenuItem!.Price * item.Quantity).ToString("0.00"))</td>
-                                        <td>
-                                            @* Remove button *@
-                                            <form asp-action="RemoveItem" method="post" class="d-inline">
-                                                <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
-                                                <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
-                                                <button type="submit" class="btn btn-sm btn-danger">✕</button>
-                                            </form>
+                                        <td class="text-center fw-bold">@item.Quantity</td>
+                                        <td class="text-end fw-bold" style="font-size:.85rem">
+                                            &euro;@((item.MenuItem!.Price * item.Quantity).ToString("0.00"))
                                         </td>
-                                    </tr>
-                                    @* Comment row *@
-                                    <tr>
-                                        <td colspan="4">
-                                            <form asp-action="UpdateComment" method="post" class="d-flex gap-2">
-                                                <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
-                                                <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
-                                                <input type="text" name="comment" value="@item.Comment"
-                                                       placeholder="Add comment (e.g. no salt, rare...)"
-                                                       class="form-control form-control-sm" />
-                                                <button type="submit" class="btn btn-sm btn-outline-secondary">Save</button>
-                                            </form>
-                                        </td>
+                                        <td><span class="badge @badgeClass" style="font-size:.65rem">@item.Status</span></td>
                                     </tr>
                                 }
                             </tbody>
                             <tfoot>
-                                <tr class="table-light fw-bold">
-                                    <td colspan="3">Total</td>
-                                    <td class="text-end">&euro; @Model.TotalPrice.ToString("0.00")</td>
+                                <tr class="table-light">
+                                    <td colspan="2" class="fw-bold" style="font-size:.8rem">Sent Total</td>
+                                    <td class="text-end fw-bold text-secondary" style="font-size:.85rem">
+                                        &euro;@Model.SentItemTotal.ToString("0.00")
+                                    </td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <div class="card-footer bg-transparent px-2 py-2">
+                        <a asp-controller="Payment" asp-action="ViewOrder"
+                           asp-route-tableId="@Model.Menu.TableId"
+                           class="btn btn-success w-100 btn-sm fw-bold">Pay Bill</a>
+                    </div>
+                </div>
+            }
+
+            @* ── New Order ── *@
+            <div class="card sticky-top" style="top: 70px;">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold">@(Model.SentItems.Any() ? "New Order" : "Current Order")</h6>
+                    @if (Model.CurrentItems.Any())
+                    {
+                        <span class="badge bg-light text-dark">@Model.CurrentItemCount items</span>
+                    }
+                </div>
+                <div class="card-body p-2">
+                    @if (!Model.CurrentItems.Any())
+                    {
+                        <p class="text-muted small text-center py-3">No items added yet.</p>
+                    }
+                    else
+                    {
+                        <table class="table table-sm align-middle mb-2">
+                            <tbody>
+                                @foreach (var item in Model.CurrentItems)
+                                {
+                                    <tr>
+                                        <td style="max-width:130px">
+                                            <div class="fw-semibold" style="font-size:.85rem">@item.MenuItem?.Name</div>
+                                            <div class="text-muted" style="font-size:.75rem">&euro;@item.MenuItem?.Price.ToString("0.00") each</div>
+                                        </td>
+                                        <td class="text-center" style="white-space:nowrap">
+                                            @if (!Model.IsSubmitted)
+                                            {
+                                                <form asp-action="DecreaseItem" method="post" class="d-inline">
+                                                    <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
+                                                    <input type="hidden" name="currentQuantity" value="@item.Quantity" />
+                                                    <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
+                                                    <button type="submit" class="btn btn-outline-secondary btn-sm px-2 py-0">−</button>
+                                                </form>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-outline-secondary btn-sm px-2 py-0" disabled>−</button>
+                                            }
+                                            <span class="mx-1 fw-bold">@item.Quantity</span>
+                                            @if (!Model.IsSubmitted)
+                                            {
+                                                <form asp-action="IncreaseItem" method="post" class="d-inline">
+                                                    <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
+                                                    <input type="hidden" name="currentQuantity" value="@item.Quantity" />
+                                                    <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
+                                                    <button type="submit" class="btn btn-outline-secondary btn-sm px-2 py-0">+</button>
+                                                </form>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-outline-secondary btn-sm px-2 py-0" disabled>+</button>
+                                            }
+                                        </td>
+                                        <td class="text-end fw-bold" style="font-size:.85rem">
+                                            &euro;@((item.MenuItem!.Price * item.Quantity).ToString("0.00"))
+                                        </td>
+                                        <td>
+                                            @if (!Model.IsSubmitted)
+                                            {
+                                                <form asp-action="RemoveItem" method="post">
+                                                    <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
+                                                    <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm px-2 py-0">✕</button>
+                                                </form>
+                                            }
+                                        </td>
+                                    </tr>
+                                    @if (!Model.IsSubmitted)
+                                    {
+                                        <tr>
+                                            <td colspan="4" class="pt-0 pb-1">
+                                                <form asp-action="UpdateComment" method="post" class="d-flex gap-1">
+                                                    <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
+                                                    <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
+                                                    <input type="text" name="comment" value="@item.Comment"
+                                                           placeholder="Comment (e.g. no salt)"
+                                                           class="form-control form-control-sm" style="font-size:.75rem" />
+                                                    <button type="submit" class="btn btn-outline-secondary btn-sm">✓</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(item.Comment))
+                                    {
+                                        <tr>
+                                            <td colspan="4" class="pt-0 pb-1 text-muted" style="font-size:.75rem">Note: @item.Comment</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-light">
+                                    <td colspan="2" class="fw-bold">Total</td>
+                                    <td class="text-end fw-bold text-primary">&euro;@Model.TotalPrice.ToString("0.00")</td>
+                                    <td></td>
                                 </tr>
                             </tfoot>
                         </table>
 
-                        @* Send Order button *@
-                        <form asp-action="SendOrder" method="post" class="mt-2">
-                            <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
-                            <button type="submit" class="btn btn-success w-100">Send Order</button>
-                        </form>
+                        @if (Model.IsSubmitted)
+                        {
+                            <div class="alert alert-success text-center fw-bold mb-2 py-2">
+                                ✓ Order sent to Kitchen/Bar
+                            </div>
+                        }
+                        else
+                        {
+                            <form asp-action="SendOrder" method="post" class="mb-2">
+                                <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
+                                <button type="submit" class="btn btn-success w-100 fw-bold">Send Order to Kitchen/Bar</button>
+                            </form>
 
-                        @* Cancel Order button *@
-                        <form asp-action="CancelOrder" method="post" class="mt-2">
-                            <input type="hidden" name="orderId" value="@Model.OrderId" />
-                            <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
-                            <button type="submit" class="btn btn-outline-danger w-100"
-                                    onclick="return confirm('Are you sure you want to cancel this order?')">
-                                Cancel Order
-                            </button>
-                        </form>
+                            <form asp-action="CancelOrder" method="post">
+                                <input type="hidden" name="orderId" value="@Model.OrderId" />
+                                <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
+                                <button type="submit" class="btn btn-outline-danger w-100 btn-sm"
+                                        onclick="return confirm('Cancel this entire order?')">Cancel Order</button>
+                            </form>
+                        }
                     }
                 </div>
             </div>
-
         </div>
+
     </div>
 </div>

@@ -14,5 +14,19 @@ namespace Chapeau_ordering_system.Models
         public bool HasUnservedItems =>
             OrderItems.Any(i => i.Status != OrderItemStatus.Served
                              && i.Status != OrderItemStatus.Cancelled);
+
+        public IEnumerable<OrderItem> ActiveItems =>
+            OrderItems.Where(i => i.Status != OrderItemStatus.Cancelled);
+
+        public DateTime FinishedAt =>
+            OrderItems.Any(i => i.ReadyAt != default)
+                ? OrderItems.Where(i => i.ReadyAt != default).Max(i => i.ReadyAt)
+                : OrderTime;
+
+        public int MinutesSinceOrder    => Infrastructure.AppClock.MinutesSince(OrderTime);
+        public int MinutesSinceFinished => Infrastructure.AppClock.MinutesSince(FinishedAt);
+
+        public List<OrderItem> GetItemsByCourse(Enums.CourseType course) =>
+            OrderItems.Where(i => i.MenuItem?.Course == course).ToList();
     }
 }
