@@ -19,14 +19,14 @@ namespace Chapeau_ordering_system.Controllers
         public IActionResult Index()
         {
             if (AuthGuard() is { } r) return r;
-            ViewData["EmployeeRole"] = Role;
-            ViewData["EmployeeName"] = HttpContext.Session.GetString("EmployeeName");
             return View(new RestaurantOverviewViewModel
             {
-                Tables     = _tableService.GetAllTables()
-                                 .OrderBy(t => int.TryParse(t.TableNumber.Replace("T", ""), out int n) ? n : 0)
-                                 .ToList(),
-                OpenOrders = _orderService.GetOpenOrders()
+                Tables       = _tableService.GetAllTables()
+                                   .OrderBy(t => int.TryParse(t.TableNumber.Replace("T", ""), out int n) ? n : 0)
+                                   .ToList(),
+                OpenOrders   = _orderService.GetOpenOrders(),
+                EmployeeName = HttpContext.Session.GetString("EmployeeName"),
+                EmployeeRole = Role
             });
         }
 
