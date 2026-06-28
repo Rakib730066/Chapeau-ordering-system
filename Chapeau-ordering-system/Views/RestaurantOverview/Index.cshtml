@@ -1,18 +1,15 @@
 @model Chapeau_ordering_system.ViewModels.RestaurantOverviewViewModel
 @using Chapeau_ordering_system.Models.Enums
+
 @{
     ViewData["Title"] = "Restaurant Overview";
-    var userRole = ViewData["EmployeeRole"]?.ToString();
-    bool isWaiter = !string.IsNullOrEmpty(userRole) &&
-                    userRole.Equals("Waiter", StringComparison.OrdinalIgnoreCase);
-    var tables = Model.Tables;
 }
 
+@* Fix 2: Auto-refresh every 30 seconds *@
+<meta http-equiv="refresh" content="30">
+
 <style>
-    .item-status-badge {
-        font-size: 0.65rem;
-        padding: 2px 6px;
-    }
+    .item-status-badge { font-size: 0.65rem; padding: 2px 6px; }
     .order-item-row {
         display: flex;
         justify-content: space-between;
@@ -23,6 +20,11 @@
     }
     .order-item-row:last-child { border-bottom: none; }
     .item-name { font-size: 0.8rem; flex: 1; }
+    .long-wait-pulse { animation: pulse 1.5s infinite; }
+    @@keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50%       { opacity: 0.6; }
+    }
 </style>
 
 <div class="container mt-4">
@@ -31,12 +33,10 @@
         <h4 class="mb-0 fw-bold">Restaurant Overview</h4>
         <div class="d-flex align-items-center gap-3">
             <span class="text-muted small">
-                Welcome, <strong>@ViewData["EmployeeName"]</strong>
-                <span class="badge bg-secondary ms-1">@ViewData["EmployeeRole"]</span>
+                Welcome, <strong>@Model.EmployeeName</strong>
+                <span class="badge bg-secondary ms-1">@Model.EmployeeRole</span>
             </span>
-            <form method="get" asp-action="Index">
-                <button type="submit" class="btn btn-sm btn-outline-secondary">&#8635; Refresh</button>
-            </form>
+            <a href="@Url.Action("Index")" class="btn btn-sm btn-outline-secondary">&#8635; Refresh</a>
         </div>
     </div>
 
@@ -48,17 +48,25 @@
     }
     @if (TempData["ErrorMessage"] is string errMsg)
     {
-        <div class="alert alert-danger">@errMsg</div>
+        <div class="alert alert-danger alert-dismissible fade show">
+            @errMsg <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
     }
     @if (TempData["ConfirmMessage"] is string confirmMsg)
     {
-        <div class="alert alert-success">@confirmMsg</div>
+        <div class="alert alert-success alert-dismissible fade show">
+            @confirmMsg <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
     }
 
-    <!-- Legend -->
-    <div class="d-flex gap-3 mb-3 small">
+    @* Legend *@
+    <div class="d-flex flex-wrap gap-3 mb-3 small">
         <span><span class="badge bg-success">Free</span></span>
         <span><span class="badge bg-danger">Occupied</span></span>
+        <span><span class="badge bg-warning text-dark">Reserved</span></span>
+        <span><span class="badge bg-info text-dark">Cleaning</span></span>
+        <span><span class="badge bg-warning text-dark">&#9888; &gt;90 min wait</span></span>
+        <span class="ms-3 text-muted">Items:</span>
         <span><span class="badge bg-primary item-status-badge">Ordered</span></span>
         <span><span class="badge bg-warning text-dark item-status-badge">Being Prepared</span></span>
         <span><span class="badge bg-success item-status-badge">Ready to Serve</span></span>
@@ -66,22 +74,31 @@
     </div>
 
     <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
-        @foreach (var table in tables)
+        @foreach (var table in Model.Tables)
         {
-            var isOccupied = table.Status == TableStatus.Occupied;
             var tableOrders = Model.GetOrdersForTable(table.TableId).ToList();
-            var hasOrders = tableOrders.Any();
-
-            string headerClass = isOccupied ? "bg-danger text-white" : "bg-success text-white";
-            string borderClass = isOccupied ? "border-danger" : "border-success";
+            var hasOrders   = tableOrders.Any();
 
             <div class="col">
-                <div class="card h-100 @borderClass" style="border-width: 2px;">
-                    <!-- Card header -->
-                    <div class="card-header d-flex justify-content-between align-items-center py-2 @headerClass">
-                        <strong>@table.TableNumber</strong>
+                <div class="card h-100 @table.CardBorderClass" style="border-width: 2px;">
+
+                    @* Card header *@
+                    <div class="card-header d-flex justify-content-between align-items-center py-2 @table.CardHeaderClass">
+                        <div>
+                            <strong>@table.TableNumber</strong>
+                            @* Fix 5: Show area if available *@
+                            @if (!string.IsNullOrWhiteSpace(table.Area))
+                            {
+                                <span class="ms-1 small opacity-75">(@table.Area)</span>
+                            }
+                        </div>
                         <div class="d-flex align-items-center gap-2">
-                            @if (table.OccupiedSince.HasValue)
+                            @* Fix 3: Long wait warning *@
+                            @if (table.IsLongWait)
+                            {
+                                <span class="long-wait-pulse fw-bold" style="font-size:.75rem">&#9888; @table.MinutesSinceOccupied min</span>
+                            }
+                            else if (table.OccupiedSince.HasValue)
                             {
                                 <small>@table.MinutesSinceOccupied min</small>
                             }
@@ -90,36 +107,26 @@
                     </div>
 
                     <div class="card-body p-2">
-                        <div class="small text-muted mb-1">Seats: @table.NumberOfSeats</div>
+                        <div class="small text-muted mb-1">
+                            Seats: @table.NumberOfSeats
+                        </div>
 
-                        @if (isOccupied && hasOrders)
+                        @if (table.IsOccupied && hasOrders)
                         {
-                            <!-- R3: show all order items with their statuses -->
                             @foreach (var order in tableOrders)
                             {
                                 @foreach (var item in order.ActiveItems)
                                 {
-                                    string badgeClass = item.Status switch {
-                                        OrderItemStatus.Ordered         => "bg-primary",
-                                        OrderItemStatus.BeingPrepared   => "bg-warning text-dark",
-                                        OrderItemStatus.ReadyToBeServed => "bg-success",
-                                        OrderItemStatus.Served          => "bg-secondary",
-                                        _                               => "bg-secondary"
-                                    };
-
                                     <div class="order-item-row">
-                                        <span class="item-name">
-                                            @item.Quantity&times; @item.MenuItem?.Name
-                                        </span>
+                                        <span class="item-name">@item.Quantity&times; @item.MenuItem?.Name</span>
                                         <div class="d-flex align-items-center gap-1">
-                                            <span class="badge @badgeClass item-status-badge">@item.Status</span>
-                                            @if (item.Status == OrderItemStatus.ReadyToBeServed)
+                                            @* Fix 4: use model property instead of switch in view *@
+                                            <span class="badge @item.StatusBadgeClass item-status-badge">@item.Status</span>
+                                            @if (item.CanBeServed)
                                             {
                                                 <form method="post" asp-action="MarkServed" asp-controller="RestaurantOverview">
                                                     <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
-                                                    <button type="submit"
-                                                            class="btn btn-outline-success py-0 px-1"
-                                                            style="font-size:0.65rem;">
+                                                    <button type="submit" class="btn btn-outline-success py-0 px-1" style="font-size:0.65rem;">
                                                         Serve ✓
                                                     </button>
                                                 </form>
@@ -129,9 +136,17 @@
                                 }
                             }
                         }
-                        else if (isOccupied)
+                        else if (table.IsOccupied)
                         {
                             <p class="text-muted small mb-0">No items ordered yet.</p>
+                        }
+                        else if (table.IsReserved)
+                        {
+                            <p class="text-muted small mb-0">Table is reserved.</p>
+                        }
+                        else if (table.IsCleaning)
+                        {
+                            <p class="text-muted small mb-0">Being cleaned.</p>
                         }
                         else
                         {
@@ -139,11 +154,11 @@
                         }
                     </div>
 
-                    <!-- Action buttons -->
-                    <div class="card-footer bg-transparent pt-1 pb-2 px-2 d-flex flex-column gap-1">
-                        @if (isWaiter)
-                        {
-                            if (table.IsFree)
+                    @* Action buttons — Fix 1: Reserved & Cleaning statuses added *@
+                    @if (Model.IsWaiter)
+                    {
+                        <div class="card-footer bg-transparent pt-1 pb-2 px-2 d-flex flex-column gap-1">
+                            @if (table.IsFree)
                             {
                                 <form asp-controller="Order" asp-action="StartOrder" method="post">
                                     <input type="hidden" name="tableId" value="@table.TableId" />
@@ -152,13 +167,19 @@
                                 <form asp-controller="RestaurantOverview" asp-action="ChangeStatus" method="post">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="tableId" value="@table.TableId" />
-                                    <input type="hidden" name="newStatus" value="1" />
+                                    <input type="hidden" name="newStatus" value="@((int)TableStatus.Reserved)" />
+                                    <button type="submit" class="btn btn-sm btn-outline-warning w-100">Mark Reserved</button>
+                                </form>
+                                <form asp-controller="RestaurantOverview" asp-action="ChangeStatus" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="tableId" value="@table.TableId" />
+                                    <input type="hidden" name="newStatus" value="@((int)TableStatus.Occupied)" />
                                     <button type="submit" class="btn btn-sm btn-outline-danger w-100">Mark Occupied</button>
                                 </form>
                             }
-                            else if (isOccupied)
+                            else if (table.IsOccupied)
                             {
-                                if (table.CurrentOrderId.HasValue)
+                                @if (table.CurrentOrderId.HasValue)
                                 {
                                     <form asp-controller="Order" asp-action="LoadOrder" method="post">
                                         <input type="hidden" name="tableId" value="@table.TableId" />
@@ -181,16 +202,40 @@
                                 <form asp-controller="RestaurantOverview" asp-action="ChangeStatus" method="post">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="tableId" value="@table.TableId" />
-                                    <input type="hidden" name="newStatus" value="0" />
+                                    <input type="hidden" name="newStatus" value="@((int)TableStatus.Cleaning)" />
+                                    <button type="submit" class="btn btn-sm btn-outline-info w-100">Mark Cleaning</button>
+                                </form>
+                                <form asp-controller="RestaurantOverview" asp-action="ChangeStatus" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="tableId" value="@table.TableId" />
+                                    <input type="hidden" name="newStatus" value="@((int)TableStatus.Free)" />
                                     <button type="submit" class="btn btn-sm btn-outline-success w-100">Mark Free</button>
                                 </form>
                             }
-                        }
-                        else
-                        {
-                            <button class="btn btn-sm btn-outline-secondary w-100" disabled>Login as Waiter to manage</button>
-                        }
-                    </div>
+                            else if (table.IsReserved)
+                            {
+                                <form asp-controller="Order" asp-action="StartOrder" method="post">
+                                    <input type="hidden" name="tableId" value="@table.TableId" />
+                                    <button type="submit" class="btn btn-sm btn-primary w-100">Start Order</button>
+                                </form>
+                                <form asp-controller="RestaurantOverview" asp-action="ChangeStatus" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="tableId" value="@table.TableId" />
+                                    <input type="hidden" name="newStatus" value="@((int)TableStatus.Free)" />
+                                    <button type="submit" class="btn btn-sm btn-outline-success w-100">Mark Free</button>
+                                </form>
+                            }
+                            else if (table.IsCleaning)
+                            {
+                                <form asp-controller="RestaurantOverview" asp-action="ChangeStatus" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="tableId" value="@table.TableId" />
+                                    <input type="hidden" name="newStatus" value="@((int)TableStatus.Free)" />
+                                    <button type="submit" class="btn btn-sm btn-outline-success w-100">Mark Free</button>
+                                </form>
+                            }
+                        </div>
+                    }
                 </div>
             </div>
         }
