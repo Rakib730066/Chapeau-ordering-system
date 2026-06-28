@@ -4,9 +4,6 @@
 
 @{
     ViewData["Title"] = "Split Payment";
-    decimal sumSoFar = Model.Payments?.Sum(p => p.AmountPaid) ?? 0m;
-    decimal remaining = Model.TotalToPay - sumSoFar;
-    if (remaining < 0) remaining = 0;
 }
 
 <div class="container mt-4">
@@ -20,10 +17,10 @@
                 VAT 21%: €@Model.VatHigh.ToString("0.00")
             </p>
             <p class="mb-0">
-                <strong>Sum of payments so far:</strong> €@sumSoFar.ToString("0.00")
-                @if (remaining > 0)
+                <strong>Sum of payments so far:</strong> €@Model.SumSoFar.ToString("0.00")
+                @if (Model.Remaining > 0)
                 {
-                    <span class="text-danger ms-2"><strong>Remaining: €@remaining.ToString("0.00")</strong></span>
+                    <span class="text-danger ms-2"><strong>Remaining: €@Model.Remaining.ToString("0.00")</strong></span>
                 }
                 else
                 {
@@ -82,7 +79,7 @@
             @if (Model.Mode == SplitMode.Equal)
             {
                 <div class="form-text">
-                    Each person's share: €@(Model.NumberOfPeople > 0 ? Math.Round(Model.TotalToPay / Model.NumberOfPeople, 2).ToString("0.00") : "0.00")
+                    Each person's share: €@Model.PerPersonShare.ToString("0.00")
                 </div>
             }
         </div>
@@ -108,7 +105,7 @@
                         <div class="col-md-3">
                             <label class="form-label small">Amount (€)</label>
                             <input asp-for="Payments[i].AmountPaid" type="number" step="0.01" min="0"
-                                   class="form-control form-control-sm" />
+                                   class="form-control form-control-sm split-amount" />
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small">Method</label>
@@ -126,9 +123,64 @@
             </div>
         }
 
+        <div id="live-summary" class="card mt-3 mb-2" style="border-color:#dee2e6">
+            <div class="card-body py-2 px-3 d-flex flex-wrap gap-4 align-items-center">
+                <span class="small">
+                    <strong>Sum entered:</strong>
+                    <span id="live-sum" class="fw-bold">€0.00</span>
+                </span>
+                <span class="small">
+                    <strong>Remaining:</strong>
+                    <span id="live-remaining" class="fw-bold">€@Model.TotalToPay.ToString("0.00")</span>
+                </span>
+                <span id="live-status" class="small fw-bold"></span>
+            </div>
+        </div>
+
         <div class="mt-3">
             <button type="submit" class="btn btn-success">Confirm split payment</button>
             <a asp-action="ViewOrder" asp-route-tableId="@Model.TableId" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>
+
+<script>
+(function () {
+    const total = @Model.TotalToPay.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    const sumEl       = document.getElementById('live-sum');
+    const remainEl    = document.getElementById('live-remaining');
+    const statusEl    = document.getElementById('live-status');
+
+    function recalc() {
+        let sum = 0;
+        document.querySelectorAll('.split-amount').forEach(function (inp) {
+            const v = parseFloat(inp.value);
+            if (!isNaN(v) && v > 0) sum += v;
+        });
+        sum = Math.round(sum * 100) / 100;
+        const remaining = Math.round((total - sum) * 100) / 100;
+
+        sumEl.textContent = '€' + sum.toFixed(2);
+        remainEl.textContent = '€' + Math.max(remaining, 0).toFixed(2);
+
+        if (remaining > 0.009) {
+            remainEl.className = 'fw-bold text-danger';
+            statusEl.textContent = '';
+        } else if (remaining < -0.009) {
+            remainEl.className = 'fw-bold text-warning';
+            statusEl.textContent = '⚠ Overpaid by €' + Math.abs(remaining).toFixed(2);
+            statusEl.className = 'small fw-bold text-warning';
+        } else {
+            remainEl.className = 'fw-bold text-success';
+            statusEl.textContent = '✓ Fully covered';
+            statusEl.className = 'small fw-bold text-success';
+        }
+    }
+
+    document.querySelectorAll('.split-amount').forEach(function (inp) {
+        inp.addEventListener('input', recalc);
+    });
+
+    recalc();
+})();
+</script>

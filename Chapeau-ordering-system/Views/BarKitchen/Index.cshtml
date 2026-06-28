@@ -82,22 +82,8 @@
         <div class="row">
             @foreach (var order in Model.Orders)
             {
-                DateTime displayTime = order.OrderTime;
-                if (Model.IsFinishedView)
-                {
-                    var finishedTimes = order.OrderItems?
-                        .Where(item => item.ReadyAt != default)
-                        .Select(item => item.ReadyAt)
-                        .ToList() ?? new List<DateTime>();
-
-                    if (finishedTimes.Count > 0)
-                    {
-                        displayTime = finishedTimes.Max();
-                    }
-                }
-
-                TimeSpan waitingTime = DateTime.Now - displayTime;
-                int waitingMinutes = (int)waitingTime.TotalMinutes;
+                var displayTime    = Model.IsFinishedView ? order.FinishedAt    : order.OrderTime;
+                var waitingMinutes = Model.IsFinishedView ? order.MinutesSinceFinished : order.MinutesSinceOrder;
 
                 <div class="col-md-6 mb-4">
                     <div class="card">
@@ -148,7 +134,7 @@
                                 <!-- I group food items by course -->
                                 @foreach (var course in Enum.GetValues(typeof(CourseType)).Cast<CourseType>())
                                 {
-                                    var itemsInCourse = order.OrderItems.Where(i => i.MenuItem?.Course == course).ToList();
+                                    var itemsInCourse = order.GetItemsByCourse(course);
 
                                     @if (itemsInCourse.Count > 0)
                                     {
@@ -204,23 +190,18 @@
                                             <strong>Status:</strong> @item.Status
                                         </p>
 
-                                        <!-- I show the correct button based on the item status -->
-                                        @if (item.Status == OrderItemStatus.Ordered)
+                                        @if (item.CanBeStarted)
                                         {
                                             <form asp-controller="BarKitchen" asp-action="StartItem" method="post">
                                                 <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
-                                                <button type="submit" class="btn btn-warning btn-sm">
-                                                    Start Item
-                                                </button>
+                                                <button type="submit" class="btn btn-warning btn-sm">Start Item</button>
                                             </form>
                                         }
-                                        else if (item.Status == OrderItemStatus.BeingPrepared)
+                                        else if (item.CanBeMarkedReady)
                                         {
                                             <form asp-controller="BarKitchen" asp-action="MarkItemReady" method="post">
                                                 <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
-                                                <button type="submit" class="btn btn-success btn-sm">
-                                                    Mark Item Ready
-                                                </button>
+                                                <button type="submit" class="btn btn-success btn-sm">Mark Item Ready</button>
                                             </form>
                                         }
                                     </div>

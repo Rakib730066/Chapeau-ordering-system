@@ -7,14 +7,15 @@ namespace Chapeau_ordering_system.Services.Interfaces
         IEnumerable<Order> GetOpenOrders();
 
         int StartOrder(int tableId, int employeeId);
+        int GetOrCreateOrder(int tableId, int employeeId);
 
         void AddItemToOrder(int orderId, int menuItemId);
 
         void SaveOrder(int orderId);
 
-        void IncreaseItemQuantity(int orderItemId, int currentQuantity);
+        void IncreaseItemQuantity(int orderItemId);
 
-        void DecreaseItemQuantity(int orderItemId, int currentQuantity);
+        void DecreaseItemQuantity(int orderItemId);
 
         void UpdateItemComment(int orderItemId, string? comment);
 
@@ -23,6 +24,7 @@ namespace Chapeau_ordering_system.Services.Interfaces
         void CancelOrder(int orderId, int tableId);
 
         List<OrderItem> GetItemsByOrderId(int orderId);
+        List<OrderItem> GetSentItemsByTableId(int tableId);
 
         Order? GetOrderById(int orderId);
 
@@ -31,5 +33,10 @@ namespace Chapeau_ordering_system.Services.Interfaces
         bool TableHasUnservedItems(int tableId);
 
         void MarkItemServed(int orderItemId);
+        void MarkItemBeingPrepared(int orderItemId);
+
+        string GetItemNameById(int menuItemId);
+        string GetItemNameByOrderItemId(int orderItemId);
+        OrderItem? GetOrderItemById(int orderItemId);
     }
 }

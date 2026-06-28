@@ -1,4 +1,4 @@
-﻿using Chapeau_ordering_system.Models.Enums;
+using Chapeau_ordering_system.Models.Enums;
 using Chapeau_ordering_system.Services.Interfaces;
 using Chapeau_ordering_system.ViewModels;
 using Microsoft.AspNetCore.Mvc;
@@ -114,7 +114,6 @@ namespace Chapeau_ordering_system.Controllers
             refreshed.Mode = input.Mode;
             refreshed.NumberOfPeople = input.NumberOfPeople;
             refreshed.Payments = input.Payments ?? new List<PersonPaymentViewModel>();
-
 
             // Rebuild rows when the people count changes.
             bool isRecalc = Request.Form["action"] == "recalc";

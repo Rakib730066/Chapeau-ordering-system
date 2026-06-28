@@ -1,3 +1,4 @@
+using Chapeau_ordering_system.Infrastructure;
 using Chapeau_ordering_system.Models.Enums;
 using Chapeau_ordering_system.Services.Interfaces;
 using Chapeau_ordering_system.ViewModels;
@@ -5,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Chapeau_ordering_system.Controllers
 {
-    public class RestaurantOverviewController : Controller
+    public class RestaurantOverviewController : BaseController
     {
         private readonly ITableService _tableService;
         private readonly IOrderService _orderService;
@@ -18,76 +19,38 @@ namespace Chapeau_ordering_system.Controllers
 
         public IActionResult Index()
         {
-            try
+            if (AuthGuard() is { } r) return r;
+            return View(new RestaurantOverviewViewModel
             {
-                string? employeeRole = HttpContext.Session.GetString("EmployeeRole");
-                if (string.IsNullOrEmpty(employeeRole))
-                    return RedirectToAction("Login", "Account");
-
-                ViewData["EmployeeName"] = HttpContext.Session.GetString("EmployeeName");
-                ViewData["EmployeeRole"] = employeeRole;
-
-                var model = new RestaurantOverviewViewModel
-                {
-                    Tables = _tableService.GetAllTables(),
-                    OpenOrders = _orderService.GetOpenOrders()
-                };
-
-                return View(model);
-            }
-            catch (Exception ex)
-            {
-                TempData["Error"] = $"Could not load restaurant overview: {ex.Message}";
-                return RedirectToAction("Login", "Account");
-            }
+                Tables       = _tableService.GetAllTablesOrdered(),
+                OpenOrders   = _orderService.GetOpenOrders(),
+                EmployeeName = HttpContext.Session.GetString(SessionKeys.EmployeeName),
+                EmployeeRole = Role
+            });
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public IActionResult ChangeStatus(int tableId, int newStatus)
+        [HttpPost, ValidateAntiForgeryToken]
+        public IActionResult ChangeStatus(int tableId, int newStatus, string? reservationName = null)
         {
+            if (AuthGuard() is { } r) return r;
             try
             {
-                string? employeeRole = HttpContext.Session.GetString("EmployeeRole");
-                if (string.IsNullOrEmpty(employeeRole))
-                    return RedirectToAction("Login", "Account");
-
-                TableStatus status = (TableStatus)newStatus; // casting, converting tableStatus int to enum.
-
-                if (status == TableStatus.Free && _orderService.TableHasUnservedItems(tableId))
-                {
-                    TempData["Error"] = "Cannot mark table as free - it still has open orders.";
-                    return RedirectToAction("Index");
-                }
-
-                _tableService.UpdateStatus(tableId, status);
-                return RedirectToAction("Index");
+                var status = (TableStatus)newStatus;
+                if (status == TableStatus.Free)
+                    _tableService.MarkFree(tableId);
+                else
+                    _tableService.UpdateStatus(tableId, status, reservationName: reservationName?.Trim());
             }
-            catch (Exception ex)
-            {
-                TempData["Error"] = $"Could not change table status: {ex.Message}";
-                return RedirectToAction("Index");
-            }
+            catch (InvalidOperationException ex) { SetError(ex.Message); }
+            return OverviewRedirect();
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
+        [HttpPost, ValidateAntiForgeryToken]
         public IActionResult MarkServed(int orderItemId)
         {
-            try
-            {
-                string? employeeRole = HttpContext.Session.GetString("EmployeeRole");
-                if (string.IsNullOrEmpty(employeeRole))
-                    return RedirectToAction("Login", "Account");
-
-                _orderService.MarkItemServed(orderItemId);
-                return RedirectToAction("Index");
-            }
-            catch (Exception ex)
-            {
-                TempData["Error"] = $"Could not mark item as served: {ex.Message}";
-                return RedirectToAction("Index");
-            }
+            if (AuthGuard() is { } r) return r;
+            _orderService.MarkItemServed(orderItemId);
+            return OverviewRedirect();
         }
     }
 }

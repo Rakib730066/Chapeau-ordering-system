@@ -16,42 +16,37 @@ namespace Chapeau_ordering_system.Repositories
 
         public List<MenuItem> GetAll()
         {
-            List<MenuItem> menuItems = new List<MenuItem>();
-            string query = "SELECT MenuItemId, Name, Price, Type, Course, Card, VatRate, Stock, IsActive FROM dbo.MenuItems ORDER BY Course, Name";
+            var menuItems = new List<MenuItem>();
+            const string query = "SELECT MenuItemId, Name, Price, Type, Course, Card, VatRate, Stock, IsActive FROM dbo.MenuItems ORDER BY Course, Name";
 
-            using (SqlConnection connection = new SqlConnection(_connectionString))
-            using (SqlCommand command = new SqlCommand(query, connection))
-            {
-                connection.Open();
-                SqlDataReader reader = command.ExecuteReader();
-                while (reader.Read())
-                    menuItems.Add(ReadMenuItem(reader));
-            }
+            using var connection = new SqlConnection(_connectionString);
+            using var command    = new SqlCommand(query, connection);
+            connection.Open();
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+                menuItems.Add(ReadMenuItem(reader));
             return menuItems;
         }
 
         public List<MenuItem> GetFiltered(MenuItemType? type, CourseType? course, CardType? card)
         {
-            List<MenuItem> menuItems = new List<MenuItem>();
-            string query = "SELECT MenuItemId, Name, Price, Type, Course, Card, VatRate, Stock, IsActive FROM dbo.MenuItems WHERE 1=1";
+            var menuItems = new List<MenuItem>();
+            var query = "SELECT MenuItemId, Name, Price, Type, Course, Card, VatRate, Stock, IsActive FROM dbo.MenuItems WHERE IsActive = 1";
 
             if (type.HasValue)   query += " AND Type = @Type";
             if (course.HasValue) query += " AND Course = @Course";
             if (card.HasValue)   query += " AND Card = @Card";
             query += " ORDER BY Course, Name";
 
-            using (SqlConnection connection = new SqlConnection(_connectionString))
-            using (SqlCommand command = new SqlCommand(query, connection))
-            {
-                if (type.HasValue)   command.Parameters.AddWithValue("@Type",   (int)type.Value);
-                if (course.HasValue) command.Parameters.AddWithValue("@Course", (int)course.Value);
-                if (card.HasValue)   command.Parameters.AddWithValue("@Card",   (int)card.Value);
-
-                connection.Open();
-                SqlDataReader reader = command.ExecuteReader();
-                while (reader.Read())
-                    menuItems.Add(ReadMenuItem(reader));
-            }
+            using var connection = new SqlConnection(_connectionString);
+            using var command    = new SqlCommand(query, connection);
+            if (type.HasValue)   command.Parameters.AddWithValue("@Type",   (int)type.Value);
+            if (course.HasValue) command.Parameters.AddWithValue("@Course", (int)course.Value);
+            if (card.HasValue)   command.Parameters.AddWithValue("@Card",   (int)card.Value);
+            connection.Open();
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+                menuItems.Add(ReadMenuItem(reader));
             return menuItems;
         }
 

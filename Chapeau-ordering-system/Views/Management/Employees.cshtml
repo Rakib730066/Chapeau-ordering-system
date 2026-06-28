@@ -32,7 +32,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (var emp in Model.OrderBy(e => e.LastName))
+            @foreach (var emp in Model)
             {
                 <tr class="@(!emp.IsActive ? "table-secondary text-muted" : "")">
                     <td>@emp.EmployeeId</td>
