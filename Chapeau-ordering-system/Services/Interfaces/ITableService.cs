@@ -6,6 +6,7 @@ namespace Chapeau_ordering_system.Services.Interfaces
     public interface ITableService
     {
         IEnumerable<RestaurantTable> GetAllTables();
+        List<RestaurantTable> GetAllTablesOrdered();
         RestaurantTable? GetById(int id);
         void UpdateStatus(int id, TableStatus status, int? currentOrderId = null, string? reservationName = null);
         void MarkFree(int tableId);

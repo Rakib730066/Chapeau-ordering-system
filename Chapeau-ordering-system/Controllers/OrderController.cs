@@ -1,3 +1,4 @@
+using Chapeau_ordering_system.Infrastructure;
 using Chapeau_ordering_system.Models;
 using Chapeau_ordering_system.Models.Enums;
 using Chapeau_ordering_system.Services.Interfaces;
@@ -10,7 +11,6 @@ namespace Chapeau_ordering_system.Controllers
     {
         private readonly IMenuItemService _menuItemService;
         private readonly IOrderService    _orderService;
-        private const string SessionOrderId = "CurrentOrderId";
 
         public OrderController(IMenuItemService menuItemService, IOrderService orderService)
         {
@@ -191,7 +191,7 @@ namespace Chapeau_ordering_system.Controllers
             SentItems           = _orderService.GetSentItemsByTableId(tableId),
             OrderStatus         = _orderService.GetOrderById(orderId)?.Status ?? Models.Enums.OrderStatus.Open,
             Menu                = CreateMenuViewModel(tableId, type, course, card),
-            WaiterName          = HttpContext.Session.GetString("EmployeeName"),
+            WaiterName          = HttpContext.Session.GetString(SessionKeys.EmployeeName),
             ConfirmationMessage = TempData["ConfirmMessage"] as string,
             ErrorMessage        = TempData["ErrorMessage"]   as string
         };
@@ -208,8 +208,8 @@ namespace Chapeau_ordering_system.Controllers
         private IActionResult RedirectToTakeOrder(int tableId, MenuItemType? type, CourseType? course, CardType? card) =>
             RedirectToAction(nameof(TakeOrder), new { tableId, type = (int?)type, course = (int?)course, card = (int?)card });
 
-        private int  GetOrderSession()            => HttpContext.Session.GetInt32(SessionOrderId) ?? 0;
-        private void SetOrderSession(int orderId) => HttpContext.Session.SetInt32(SessionOrderId, orderId);
-        private void ClearOrderSession()          => HttpContext.Session.Remove(SessionOrderId);
+        private int  GetOrderSession()            => HttpContext.Session.GetInt32(SessionKeys.CurrentOrderId) ?? 0;
+        private void SetOrderSession(int orderId) => HttpContext.Session.SetInt32(SessionKeys.CurrentOrderId, orderId);
+        private void ClearOrderSession()          => HttpContext.Session.Remove(SessionKeys.CurrentOrderId);
     }
 }

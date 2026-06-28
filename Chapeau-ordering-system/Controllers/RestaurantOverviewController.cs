@@ -1,3 +1,4 @@
+using Chapeau_ordering_system.Infrastructure;
 using Chapeau_ordering_system.Models.Enums;
 using Chapeau_ordering_system.Services.Interfaces;
 using Chapeau_ordering_system.ViewModels;
@@ -21,11 +22,9 @@ namespace Chapeau_ordering_system.Controllers
             if (AuthGuard() is { } r) return r;
             return View(new RestaurantOverviewViewModel
             {
-                Tables       = _tableService.GetAllTables()
-                                   .OrderBy(t => int.TryParse(t.TableNumber.Replace("T", ""), out int n) ? n : 0)
-                                   .ToList(),
+                Tables       = _tableService.GetAllTablesOrdered(),
                 OpenOrders   = _orderService.GetOpenOrders(),
-                EmployeeName = HttpContext.Session.GetString("EmployeeName"),
+                EmployeeName = HttpContext.Session.GetString(SessionKeys.EmployeeName),
                 EmployeeRole = Role
             });
         }

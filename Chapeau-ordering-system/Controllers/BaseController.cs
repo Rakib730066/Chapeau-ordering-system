@@ -1,11 +1,12 @@
+using Chapeau_ordering_system.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Chapeau_ordering_system.Controllers
 {
     public abstract class BaseController : Controller
     {
-        protected int?    EmployeeId   => HttpContext.Session.GetInt32("EmployeeId");
-        protected string? Role         => HttpContext.Session.GetString("EmployeeRole");
+        protected int?    EmployeeId   => HttpContext.Session.GetInt32(SessionKeys.EmployeeId);
+        protected string? Role         => HttpContext.Session.GetString(SessionKeys.EmployeeRole);
 
         protected bool IsAuthenticated => EmployeeId.HasValue;
         protected bool IsManager       => Role == "Manager";
@@ -25,4 +26,3 @@ namespace Chapeau_ordering_system.Controllers
         protected void SetError(string message)   => TempData["ErrorMessage"]   = message;
     }
 }
- 

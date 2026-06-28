@@ -18,6 +18,11 @@ namespace Chapeau_ordering_system.Services
 
         public IEnumerable<RestaurantTable> GetAllTables() => _tableRepository.GetAllTables();
 
+        public List<RestaurantTable> GetAllTablesOrdered() =>
+            _tableRepository.GetAllTables()
+                .OrderBy(t => int.TryParse(t.TableNumber.Replace("T", ""), out int n) ? n : 0)
+                .ToList();
+
         public RestaurantTable? GetById(int id) => _tableRepository.GetById(id);
 
         public void UpdateStatus(int id, TableStatus status, int? currentOrderId = null, string? reservationName = null)
