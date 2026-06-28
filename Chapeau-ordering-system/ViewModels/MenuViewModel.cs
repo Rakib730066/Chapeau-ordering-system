@@ -11,5 +11,11 @@ namespace Chapeau_ordering_system.ViewModels
         public CardType? ActiveCard { get; set; }
 
         public int TableId { get; set; }
+
+        public IEnumerable<IGrouping<MenuItemType, MenuItem>> ItemsByType =>
+            MenuItems.GroupBy(i => i.Type).OrderBy(g => g.Key);
+
+        public IEnumerable<CourseType> DisplayCourses =>
+            Enum.GetValues<CourseType>().Where(c => c != CourseType.None);
     }
 }

@@ -95,7 +95,7 @@
                 All courses
             </a>
 
-            @foreach (CourseType course in Enum.GetValues<CourseType>().Where(c => c != CourseType.None))
+            @foreach (CourseType course in Model.DisplayCourses)
             {
                 <a asp-action="Menu"
                    asp-route-tableId="@Model.TableId"

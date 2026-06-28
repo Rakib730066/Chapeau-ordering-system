@@ -1,158 +1,121 @@
-﻿using Chapeau_ordering_system.Models.Enums;
+using Chapeau_ordering_system.Models.Enums;
 using Chapeau_ordering_system.Services.Interfaces;
 using Chapeau_ordering_system.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Chapeau_ordering_system.Controllers
 {
-    public class PaymentController : Controller
+    public class PaymentController : BaseController
     {
         private readonly IPaymentService _paymentService;
-
-        public PaymentController(IPaymentService paymentService)
-        {
-            _paymentService = paymentService;
-        }
+        public PaymentController(IPaymentService paymentService) => _paymentService = paymentService;
 
         [HttpGet]
         public IActionResult ViewOrder(int tableId)
         {
-            if (HttpContext.Session.GetInt32("EmployeeId") == null)
-                return RedirectToAction("Login", "Account");
-
+            if (AuthGuard() is { } r) return r;
             var model = _paymentService.GetOrderForPayment(tableId);
-            if (model == null)
-            {
-                TempData["ErrorMessage"] = $"No open order found for table {tableId}.";
-                return RedirectToAction("Index", "RestaurantOverview");
-            }
-
+            if (model == null) { SetError($"No open order found for table {tableId}."); return OverviewRedirect(); }
             return View(model);
         }
 
         [HttpGet]
         public IActionResult FinishOrder(int tableId)
         {
-            if (HttpContext.Session.GetInt32("EmployeeId") == null)
-                return RedirectToAction("Login", "Account");
-
+            if (AuthGuard() is { } r) return r;
             var model = _paymentService.GetFinishOrderViewModel(tableId);
-            if (model == null)
-            {
-                TempData["ErrorMessage"] = $"No open order found for table {tableId}.";
-                return RedirectToAction("Index", "RestaurantOverview");
-            }
-
+            if (model == null) { SetError($"No open order found for table {tableId}."); return OverviewRedirect(); }
             return View(model);
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
+        [HttpPost, ValidateAntiForgeryToken]
         public IActionResult FinishOrder(FinishOrderViewModel input)
         {
-            if (HttpContext.Session.GetInt32("EmployeeId") == null)
-                return RedirectToAction("Login", "Account");
-
-            if (!ModelState.IsValid)
-            {
-                var refreshedForm = _paymentService.GetFinishOrderViewModel(input.TableId);
-                if (refreshedForm != null)
-                {
-                    refreshedForm.AmountPaid = input.AmountPaid;
-                    refreshedForm.PaymentMethod = input.PaymentMethod;
-                    refreshedForm.Feedback = input.Feedback;
-                    return View(refreshedForm);
-                }
-                return View(input);
-            }
-
-            try
-            {
-                _paymentService.FinishOrder(input);
-            }
-            catch (Exception ex)
-            {
-                TempData["ErrorMessage"] = $"Could not finish the order: {ex.Message}";
-                return RedirectToAction("Index", "RestaurantOverview");
-            }
-
-            TempData["ConfirmationMessage"] =
-                $"Order for table {input.TableNumber} finished successfully.";
-            return RedirectToAction("Confirmation", new { tableNumber = input.TableNumber });
+            if (AuthGuard() is { } r) return r;
+            if (!ModelState.IsValid) return View(RestoreFinishOrderForm(input));
+            return ProcessFinishOrder(input);
         }
 
         [HttpGet]
         public IActionResult SplitOrder(int tableId)
         {
-            if (HttpContext.Session.GetInt32("EmployeeId") == null)
-                return RedirectToAction("Login", "Account");
-
+            if (AuthGuard() is { } r) return r;
             var model = _paymentService.GetSplitPaymentViewModel(tableId);
-            if (model == null)
-            {
-                TempData["ErrorMessage"] = $"No open order found for table {tableId}.";
-                return RedirectToAction("Index", "RestaurantOverview");
-            }
-
+            if (model == null) { SetError($"No open order found for table {tableId}."); return OverviewRedirect(); }
             return View(model);
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
+        [HttpPost, ValidateAntiForgeryToken]
         public IActionResult SplitOrder(SplitPaymentViewModel input)
         {
-            if (HttpContext.Session.GetInt32("EmployeeId") == null)
-                return RedirectToAction("Login", "Account");
-
-            var refreshed = _paymentService.GetSplitPaymentViewModel(input.TableId);
-            if (refreshed == null)
-            {
-                TempData["ErrorMessage"] = $"No open order found for table {input.TableId}.";
-                return RedirectToAction("Index", "RestaurantOverview");
-            }
-
-            refreshed.Mode = input.Mode;
-            refreshed.NumberOfPeople = input.NumberOfPeople;
-            refreshed.Payments = input.Payments ?? new List<PersonPaymentViewModel>();
-
-
-            // Rebuild rows when the people count changes.
-            bool isRecalc = Request.Form["action"] == "recalc";
-            bool peopleCountMismatch = refreshed.Mode == SplitMode.Equal
-                                       && refreshed.Payments.Count != refreshed.NumberOfPeople;
-
-            if (isRecalc || peopleCountMismatch)
-            {
-                refreshed = _paymentService.RebuildEqualSplit(refreshed);
-                ModelState.Clear();
-                return View(refreshed);
-            }
-
-            if (!ModelState.IsValid)
-                return View(refreshed);
-
-            var (success, errorMessage) = _paymentService.FinishSplitOrder(refreshed);
-
-            if (!success)
-            {
-                ModelState.AddModelError("", errorMessage ?? "Could not finish split payment.");
-                return View(refreshed);
-            }
-
-            TempData["ConfirmationMessage"] =
-                $"Order for table {input.TableNumber} finished successfully ({refreshed.Payments.Count} payments).";
-            return RedirectToAction("Confirmation", new { tableNumber = input.TableNumber });
+            if (AuthGuard() is { } r) return r;
+            var vm = _paymentService.GetSplitPaymentViewModel(input.TableId);
+            if (vm == null) { SetError($"No open order found for table {input.TableId}."); return OverviewRedirect(); }
+            ApplySplitPaymentInput(vm, input);
+            if (SplitNeedsRecalculation(vm)) return View(RecalculateEqualSplit(vm));
+            if (!ModelState.IsValid) return View(vm);
+            return CompleteSplitPayment(vm, input.TableNumber);
         }
 
         [HttpGet]
         public IActionResult Confirmation(string tableNumber)
         {
-            if (HttpContext.Session.GetInt32("EmployeeId") == null)
-                return RedirectToAction("Login", "Account");
-
+            if (AuthGuard() is { } r) return r;
             ViewData["TableNumber"] = tableNumber;
-            ViewData["Message"] = TempData["ConfirmationMessage"];
+            ViewData["Message"]     = TempData["ConfirmationMessage"];
             return View();
+        }
+
+        private FinishOrderViewModel RestoreFinishOrderForm(FinishOrderViewModel input)
+        {
+            var vm = _paymentService.GetFinishOrderViewModel(input.TableId) ?? input;
+            vm.AmountPaid    = input.AmountPaid;
+            vm.PaymentMethod = input.PaymentMethod;
+            vm.Feedback      = input.Feedback;
+            return vm;
+        }
+
+        private IActionResult ProcessFinishOrder(FinishOrderViewModel input)
+        {
+            try
+            {
+                _paymentService.FinishOrder(input);
+                TempData["ConfirmationMessage"] = $"Order for table {input.TableNumber} finished successfully.";
+                return RedirectToAction(nameof(Confirmation), new { tableNumber = input.TableNumber });
+            }
+            catch (Exception ex)
+            {
+                SetError($"Could not finish the order: {ex.Message}");
+                return OverviewRedirect();
+            }
+        }
+
+        private static void ApplySplitPaymentInput(SplitPaymentViewModel vm, SplitPaymentViewModel input)
+        {
+            vm.Mode           = input.Mode;
+            vm.NumberOfPeople = input.NumberOfPeople;
+            vm.Payments       = input.Payments ?? new List<PersonPaymentViewModel>();
+        }
+
+        private bool SplitNeedsRecalculation(SplitPaymentViewModel vm)
+        {
+            bool isRecalc = Request.Form["action"] == "recalc";
+            bool mismatch = vm.Mode == SplitMode.Equal && vm.Payments.Count != vm.NumberOfPeople;
+            return isRecalc || mismatch;
+        }
+
+        private SplitPaymentViewModel RecalculateEqualSplit(SplitPaymentViewModel vm)
+        {
+            ModelState.Clear();
+            return _paymentService.RebuildEqualSplit(vm);
+        }
+
+        private IActionResult CompleteSplitPayment(SplitPaymentViewModel vm, string tableNumber)
+        {
+            var (success, error) = _paymentService.FinishSplitOrder(vm);
+            if (!success) { ModelState.AddModelError("", error ?? "Could not finish split payment."); return View(vm); }
+            TempData["ConfirmationMessage"] = $"Order for table {tableNumber} finished ({vm.Payments.Count} payments).";
+            return RedirectToAction(nameof(Confirmation), new { tableNumber });
         }
     }
 }

@@ -5,9 +5,7 @@
     var userRole = ViewData["EmployeeRole"]?.ToString();
     bool isWaiter = !string.IsNullOrEmpty(userRole) &&
                     userRole.Equals("Waiter", StringComparison.OrdinalIgnoreCase);
-    var tables = Model.Tables
-        .OrderBy(t => int.TryParse(t.TableNumber.Replace("T", ""), out int n) ? n : 0)
-        .ToList();
+    var tables = Model.Tables;
 }
 
 <style>
@@ -85,8 +83,7 @@
                         <div class="d-flex align-items-center gap-2">
                             @if (table.OccupiedSince.HasValue)
                             {
-                                int mins = (int)(DateTime.Now - table.OccupiedSince.Value).TotalMinutes;
-                                <small>@mins min</small>
+                                <small>@table.MinutesSinceOccupied min</small>
                             }
                             <span class="badge bg-light text-dark">@table.Status</span>
                         </div>
@@ -100,7 +97,7 @@
                             <!-- R3: show all order items with their statuses -->
                             @foreach (var order in tableOrders)
                             {
-                                @foreach (var item in order.OrderItems.Where(i => i.Status != OrderItemStatus.Cancelled))
+                                @foreach (var item in order.ActiveItems)
                                 {
                                     string badgeClass = item.Status switch {
                                         OrderItemStatus.Ordered         => "bg-primary",
