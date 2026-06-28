@@ -54,7 +54,13 @@
         <div class="col-lg-8">
 
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <h5 class="mb-0 fw-bold">Menu — Table @Model.Menu.TableId</h5>
+                <div>
+                    <h5 class="mb-0 fw-bold">Menu — Table @Model.Menu.TableId</h5>
+                    @if (!string.IsNullOrWhiteSpace(Model.WaiterName))
+                    {
+                        <small class="text-muted">Waiter: @Model.WaiterName</small>
+                    }
+                </div>
                 <a asp-controller="RestaurantOverview" asp-action="Index"
                    class="btn btn-outline-secondary btn-sm">&larr; Back</a>
             </div>
@@ -414,6 +420,14 @@
                                         <td></td>
                                     </tr>
                                 }
+                                @foreach (var vat in Model.VatBreakdown)
+                                {
+                                    <tr>
+                                        <td colspan="2" class="text-muted" style="font-size:.75rem">VAT @vat.Rate.ToString("P0")</td>
+                                        <td class="text-end text-muted" style="font-size:.75rem">&euro;@vat.Amount.ToString("0.00")</td>
+                                        <td></td>
+                                    </tr>
+                                }
                             </tfoot>
                         </table>
 
@@ -431,7 +445,10 @@
                         {
                             <form asp-action="SendOrder" method="post" class="mb-2">
                                 <input type="hidden" name="tableId" value="@Model.Menu.TableId" />
-                                <button type="submit" class="btn btn-success w-100 fw-bold">Send Order to Kitchen/Bar</button>
+                                <button type="submit" class="btn btn-success w-100 fw-bold"
+                                        onclick="return confirm('Send @Model.CurrentItemCount item(s) to Kitchen/Bar?')">
+                                    Send Order to Kitchen/Bar
+                                </button>
                             </form>
 
                             <form asp-action="CancelOrder" method="post">

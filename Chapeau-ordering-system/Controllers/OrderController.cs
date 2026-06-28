@@ -201,6 +201,7 @@ namespace Chapeau_ordering_system.Controllers
             SentItems           = _orderService.GetSentItemsByTableId(tableId),
             OrderStatus         = _orderService.GetOrderById(orderId)?.Status ?? Models.Enums.OrderStatus.Open,
             Menu                = CreateMenuViewModel(tableId, type, course, card),
+            WaiterName          = HttpContext.Session.GetString("EmployeeName"),
             ConfirmationMessage = TempData["ConfirmMessage"] as string,
             ErrorMessage        = TempData["ErrorMessage"]   as string
         };
