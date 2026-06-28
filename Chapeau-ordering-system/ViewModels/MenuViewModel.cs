@@ -10,7 +10,8 @@ namespace Chapeau_ordering_system.ViewModels
         public CourseType? ActiveCourse { get; set; }
         public CardType? ActiveCard { get; set; }
 
-        public int TableId { get; set; }
+        public int  TableId        { get; set; }
+        public bool HasActiveOrder { get; set; }
 
         public IEnumerable<IGrouping<MenuItemType, MenuItem>> ItemsByType =>
             MenuItems.GroupBy(i => i.Type).OrderBy(g => g.Key);
