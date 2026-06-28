@@ -9,6 +9,7 @@ namespace Chapeau_ordering_system.Repositories.Interfaces
         IEnumerable<Order> GetOpenOrders();
         Order? GetOrderById(int orderId);
         Order? GetOrderByTableId(int tableId);
+        bool HasAnyActiveOrder(int tableId);
         List<OrderItem> GetItemsByOrderId(int orderId);
         List<OrderItem> GetSentItemsByTableId(int tableId);
         OrderItem? GetOrderItemById(int orderItemId);

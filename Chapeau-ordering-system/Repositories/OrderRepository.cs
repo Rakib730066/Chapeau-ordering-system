@@ -133,9 +133,27 @@ namespace Chapeau_ordering_system.Repositories
                 INNER JOIN dbo.Tables    t ON t.TableId    = o.TableId
                 INNER JOIN dbo.Employees e ON e.EmployeeId = o.EmployeeId
                 WHERE o.TableId = @TableId
-                AND   o.Status IN (@open, @submitted)
+                AND   o.Status  = @open
                 AND   CAST(o.OrderTime AS DATE) = CAST(GETDATE() AS DATE)
                 ORDER BY o.OrderTime DESC";
+
+            using var conn = new SqlConnection(_connectionString);
+            using var cmd  = new SqlCommand(query, conn);
+            cmd.Parameters.AddWithValue("@TableId", tableId);
+            cmd.Parameters.AddWithValue("@open",    (int)OrderStatus.Open);
+            conn.Open();
+            using var reader = cmd.ExecuteReader();
+            return reader.Read() ? MapOrderFromReader(reader) : null;
+        }
+
+        public bool HasAnyActiveOrder(int tableId)
+        {
+            const string query = @"
+                SELECT COUNT(*)
+                FROM dbo.Orders
+                WHERE TableId = @TableId
+                  AND Status IN (@open, @submitted)
+                  AND CAST(OrderTime AS DATE) = CAST(GETDATE() AS DATE)";
 
             using var conn = new SqlConnection(_connectionString);
             using var cmd  = new SqlCommand(query, conn);
@@ -143,8 +161,7 @@ namespace Chapeau_ordering_system.Repositories
             cmd.Parameters.AddWithValue("@open",      (int)OrderStatus.Open);
             cmd.Parameters.AddWithValue("@submitted", (int)OrderStatus.Submitted);
             conn.Open();
-            using var reader = cmd.ExecuteReader();
-            return reader.Read() ? MapOrderFromReader(reader) : null;
+            return (int)cmd.ExecuteScalar() > 0;
         }
 
         public int Add(Order order)

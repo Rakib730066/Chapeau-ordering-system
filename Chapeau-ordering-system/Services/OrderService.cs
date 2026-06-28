@@ -69,7 +69,7 @@ namespace Chapeau_ordering_system.Services
 
         private void EnsureNoActiveOrder(int tableId)
         {
-            if (_orderRepository.GetOrderByTableId(tableId) != null)
+            if (_orderRepository.HasAnyActiveOrder(tableId))
                 throw new InvalidOperationException("This table already has an active order. Please load the existing order.");
         }
 
