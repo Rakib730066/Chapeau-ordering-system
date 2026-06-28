@@ -212,11 +212,12 @@ namespace Chapeau_ordering_system.Controllers
 
         private MenuViewModel CreateMenuViewModel(int tableId, MenuItemType? type, CourseType? course, CardType? card) => new()
         {
-            MenuItems    = _menuItemService.GetFilteredMenuItems(type, course, card),
-            ActiveType   = type,
-            ActiveCourse = course,
-            ActiveCard   = card,
-            TableId      = tableId
+            MenuItems      = _menuItemService.GetFilteredMenuItems(type, course, card),
+            ActiveType     = type,
+            ActiveCourse   = course,
+            ActiveCard     = card,
+            TableId        = tableId,
+            HasActiveOrder = GetOrderSession() != 0
         };
 
         private IActionResult RedirectToTakeOrder(int tableId, MenuItemType? type, CourseType? course, CardType? card) =>

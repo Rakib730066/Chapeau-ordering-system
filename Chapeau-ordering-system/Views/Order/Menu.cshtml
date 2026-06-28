@@ -19,20 +19,23 @@
         <div class="alert alert-danger">@errorMsg</div>
     }
 
+    <div class="alert alert-info mb-3">
+        Start a new order or load an existing one for this table to begin adding items.
+    </div>
     <div class="d-flex gap-2 mb-4">
         <form asp-controller="Order" asp-action="StartOrder" method="post">
             <input type="hidden" name="tableId" value="@Model.TableId" />
-            <button type="submit" class="btn btn-primary">Start Order</button>
+            <button type="submit" class="btn btn-primary">Start New Order</button>
         </form>
         <form asp-controller="Order" asp-action="LoadOrder" method="post">
             <input type="hidden" name="tableId" value="@Model.TableId" />
-            <button type="submit" class="btn btn-outline-warning">Load Existing Order</button>
+            <button type="submit" class="btn btn-outline-warning">Load / Resume Order</button>
         </form>
     </div>
 
-    @* ── Card type filter buttons (All / Food / Drinks) ── *@
+    @* ── Type filter buttons (All / Food / Drinks) ── *@
     <div class="mb-3">
-        <span class="fw-semibold me-2">Card:</span>
+        <span class="fw-semibold me-2">Type:</span>
 
         <a asp-action="Menu"
            asp-route-tableId="@Model.TableId"
@@ -120,9 +123,13 @@
                 <tr>
                     <th>Item</th>
                     <th>Course</th>
-                    <th>Card</th>
+                    <th>Type</th>
                     <th class="text-end">Price</th>
                     <th class="text-center">Stock</th>
+                    @if (Model.HasActiveOrder)
+                    {
+                        <th></th>
+                    }
                 </tr>
             </thead>
             <tbody>
@@ -149,6 +156,26 @@
                                 <span class="text-muted small">@item.Stock</span>
                             }
                         </td>
+                        @if (Model.HasActiveOrder)
+                        {
+                            <td>
+                                @if (!item.IsOutOfStock)
+                                {
+                                    <form asp-controller="Order" asp-action="AddItem" method="post">
+                                        <input type="hidden" name="menuItemId" value="@item.MenuItemId" />
+                                        <input type="hidden" name="tableId"    value="@Model.TableId" />
+                                        <input type="hidden" name="type"       value="@((int?)Model.ActiveType)" />
+                                        <input type="hidden" name="course"     value="@((int?)Model.ActiveCourse)" />
+                                        <input type="hidden" name="card"       value="@((int?)Model.ActiveCard)" />
+                                        <button type="submit" class="btn btn-primary btn-sm">+ Add</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-secondary btn-sm" disabled>Unavailable</button>
+                                }
+                            </td>
+                        }
                     </tr>
                 }
             </tbody>
