@@ -11,7 +11,8 @@ namespace Chapeau_ordering_system.Models
         public int? CurrentOrderId { get; set; }
         public DateTime? OccupiedSince { get; set; }
         public DateTime LastUpdated { get; set; }
-        public string? Area { get; set; }
+        public string? Area            { get; set; }
+        public string? ReservationName { get; set; }
         public bool IsActive { get; set; } = true;
 
         public bool IsFree       => Status == TableStatus.Free;

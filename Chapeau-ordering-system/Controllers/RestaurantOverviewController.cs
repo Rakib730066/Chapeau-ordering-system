@@ -1,3 +1,4 @@
+using Chapeau_ordering_system.Infrastructure;
 using Chapeau_ordering_system.Models.Enums;
 using Chapeau_ordering_system.Services.Interfaces;
 using Chapeau_ordering_system.ViewModels;
@@ -21,26 +22,26 @@ namespace Chapeau_ordering_system.Controllers
             if (AuthGuard() is { } r) return r;
             return View(new RestaurantOverviewViewModel
             {
-                Tables       = _tableService.GetAllTables()
-                                   .OrderBy(t => int.TryParse(t.TableNumber.Replace("T", ""), out int n) ? n : 0)
-                                   .ToList(),
+                Tables       = _tableService.GetAllTablesOrdered(),
                 OpenOrders   = _orderService.GetOpenOrders(),
-                EmployeeName = HttpContext.Session.GetString("EmployeeName"),
+                EmployeeName = HttpContext.Session.GetString(SessionKeys.EmployeeName),
                 EmployeeRole = Role
             });
         }
 
         [HttpPost, ValidateAntiForgeryToken]
-        public IActionResult ChangeStatus(int tableId, int newStatus)
+        public IActionResult ChangeStatus(int tableId, int newStatus, string? reservationName = null)
         {
             if (AuthGuard() is { } r) return r;
-            var status = (TableStatus)newStatus;
-            if (status == TableStatus.Free && _orderService.TableHasUnservedItems(tableId))
+            try
             {
-                SetError("Cannot mark table as free — it still has unserved items.");
-                return OverviewRedirect();
+                var status = (TableStatus)newStatus;
+                if (status == TableStatus.Free)
+                    _tableService.MarkFree(tableId);
+                else
+                    _tableService.UpdateStatus(tableId, status, reservationName: reservationName?.Trim());
             }
-            _tableService.UpdateStatus(tableId, status);
+            catch (InvalidOperationException ex) { SetError(ex.Message); }
             return OverviewRedirect();
         }
 

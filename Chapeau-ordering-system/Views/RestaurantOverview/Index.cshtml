@@ -8,24 +8,6 @@
 @* Fix 2: Auto-refresh every 30 seconds *@
 <meta http-equiv="refresh" content="30">
 
-<style>
-    .item-status-badge { font-size: 0.65rem; padding: 2px 6px; }
-    .order-item-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 3px 0;
-        border-bottom: 1px solid #f0f0f0;
-        gap: 6px;
-    }
-    .order-item-row:last-child { border-bottom: none; }
-    .item-name { font-size: 0.8rem; flex: 1; }
-    .long-wait-pulse { animation: pulse 1.5s infinite; }
-    @@keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50%       { opacity: 0.6; }
-    }
-</style>
 
 <div class="container mt-4">
 
@@ -142,7 +124,13 @@
                         }
                         else if (table.IsReserved)
                         {
-                            <p class="text-muted small mb-0">Table is reserved.</p>
+                            <p class="text-muted small mb-0">
+                                Reserved
+                                @if (!string.IsNullOrWhiteSpace(table.ReservationName))
+                                {
+                                    <span>for <strong>@table.ReservationName</strong></span>
+                                }
+                            </p>
                         }
                         else if (table.IsCleaning)
                         {
@@ -168,6 +156,8 @@
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="tableId" value="@table.TableId" />
                                     <input type="hidden" name="newStatus" value="@((int)TableStatus.Reserved)" />
+                                    <input type="text" name="reservationName" placeholder="Guest name (optional)"
+                                           class="form-control form-control-sm mb-1" maxlength="100" />
                                     <button type="submit" class="btn btn-sm btn-outline-warning w-100">Mark Reserved</button>
                                 </form>
                                 <form asp-controller="RestaurantOverview" asp-action="ChangeStatus" method="post">

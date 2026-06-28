@@ -22,6 +22,8 @@ namespace Chapeau_ordering_system.Models
             _                               => "bg-secondary"
         };
 
-        public bool CanBeServed => Status == OrderItemStatus.ReadyToBeServed;
+        public bool CanBeServed       => Status == OrderItemStatus.ReadyToBeServed;
+        public bool CanBeStarted      => Status == OrderItemStatus.Ordered;
+        public bool CanBeMarkedReady  => Status == OrderItemStatus.BeingPrepared;
     }
 }

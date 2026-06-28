@@ -190,23 +190,18 @@
                                             <strong>Status:</strong> @item.Status
                                         </p>
 
-                                        <!-- I show the correct button based on the item status -->
-                                        @if (item.Status == OrderItemStatus.Ordered)
+                                        @if (item.CanBeStarted)
                                         {
                                             <form asp-controller="BarKitchen" asp-action="StartItem" method="post">
                                                 <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
-                                                <button type="submit" class="btn btn-warning btn-sm">
-                                                    Start Item
-                                                </button>
+                                                <button type="submit" class="btn btn-warning btn-sm">Start Item</button>
                                             </form>
                                         }
-                                        else if (item.Status == OrderItemStatus.BeingPrepared)
+                                        else if (item.CanBeMarkedReady)
                                         {
                                             <form asp-controller="BarKitchen" asp-action="MarkItemReady" method="post">
                                                 <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
-                                                <button type="submit" class="btn btn-success btn-sm">
-                                                    Mark Item Ready
-                                                </button>
+                                                <button type="submit" class="btn btn-success btn-sm">Mark Item Ready</button>
                                             </form>
                                         }
                                     </div>
