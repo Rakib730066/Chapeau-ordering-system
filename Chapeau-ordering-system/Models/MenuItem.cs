@@ -15,5 +15,8 @@ namespace Chapeau_ordering_system.Models
         public bool IsOutOfStock => Stock <= 0;
         public bool IsLowStock => Stock > 0 && Stock <= 10;
         public int VatRatePercent => (int)(VatRate * 100);
+
+        public string TypeLabel      => Type == MenuItemType.Drink ? "Drink" : "Food";
+        public string TypeBadgeClass => Type == MenuItemType.Drink ? "bg-info text-dark" : "bg-success";
     }
 }

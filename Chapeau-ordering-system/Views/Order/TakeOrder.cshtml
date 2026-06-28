@@ -102,7 +102,7 @@
                 </div>
 
                 @* Course — only when food is active *@
-                @if (Model.Menu.ActiveType == null || Model.Menu.ActiveType == MenuItemType.Food)
+                @if (Model.Menu.ShowCourseFilter)
                 {
                     <span class="text-muted">|</span>
                     <div class="btn-group btn-group-sm" role="group">
@@ -132,12 +132,7 @@
 
                 @if (typeGroup.Key == MenuItemType.Food)
                 {
-                    var byCourse = typeGroup
-                        .GroupBy(i => i.Course)
-                        .Where(g => Model.Menu.DisplayCourses.Contains(g.Key))
-                        .OrderBy(g => g.Key);
-
-                    @foreach (var courseGroup in byCourse)
+                    @foreach (var courseGroup in Model.Menu.FoodItemsByCourse)
                     {
                         @if (Model.Menu.ActiveCourse == null || Model.Menu.ActiveCourse == courseGroup.Key)
                         {
@@ -256,13 +251,6 @@
                             <tbody>
                                 @foreach (var item in Model.SentItems)
                                 {
-                                    string badgeClass = item.Status switch {
-                                        Chapeau_ordering_system.Models.Enums.OrderItemStatus.Ordered         => "bg-primary",
-                                        Chapeau_ordering_system.Models.Enums.OrderItemStatus.BeingPrepared   => "bg-warning text-dark",
-                                        Chapeau_ordering_system.Models.Enums.OrderItemStatus.ReadyToBeServed => "bg-success",
-                                        Chapeau_ordering_system.Models.Enums.OrderItemStatus.Served          => "bg-secondary",
-                                        _ => "bg-secondary"
-                                    };
                                     <tr>
                                         <td style="max-width:130px">
                                             <div class="fw-semibold" style="font-size:.85rem">@item.MenuItem?.Name</div>
@@ -276,8 +264,8 @@
                                             &euro;@((item.MenuItem!.Price * item.Quantity).ToString("0.00"))
                                         </td>
                                         <td>
-                                            <span class="badge @badgeClass" style="font-size:.65rem">@item.Status</span>
-                                            @if (item.Status == Chapeau_ordering_system.Models.Enums.OrderItemStatus.ReadyToBeServed)
+                                            <span class="badge @item.StatusBadgeClass" style="font-size:.65rem">@item.Status</span>
+                                            @if (item.CanBeServed)
                                             {
                                                 <form asp-action="MarkServed" method="post" class="mt-1">
                                                     <input type="hidden" name="orderItemId" value="@item.OrderItemId" />
@@ -318,7 +306,7 @@
             @* ── New Order ── *@
             <div class="card sticky-top" style="top: 70px;">
                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0 fw-bold">@(Model.SentItems.Any() ? "New Order" : "Current Order")</h6>
+                    <h6 class="mb-0 fw-bold">@Model.OrderPanelTitle</h6>
                     @if (Model.CurrentItems.Any())
                     {
                         <span class="badge bg-light text-dark">@Model.CurrentItemCount items</span>

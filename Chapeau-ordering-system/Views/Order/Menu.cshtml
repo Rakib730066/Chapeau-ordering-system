@@ -83,7 +83,7 @@
     </div>
 
     @* ── Course filter buttons (only shown for food) ── *@
-    @if (Model.ActiveType == null || Model.ActiveType == MenuItemType.Food)
+    @if (Model.ShowCourseFilter)
     {
         <div class="mb-4">
             <span class="fw-semibold me-2">Course:</span>
@@ -132,14 +132,7 @@
                         <td><span class="fw-semibold">@item.Name</span></td>
                         <td>@(item.Course == CourseType.None ? "—" : item.Course.ToString())</td>
                         <td>
-                            @if (item.Type == MenuItemType.Drink)
-                            {
-                                <span class="badge bg-info text-dark">Drink</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-success">Food</span>
-                            }
+                            <span class="badge @item.TypeBadgeClass">@item.TypeLabel</span>
                         </td>
                         <td class="text-end">&euro; @item.Price.ToString("0.00")</td>
                         <td class="text-center">

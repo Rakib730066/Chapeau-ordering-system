@@ -35,7 +35,8 @@ namespace Chapeau_ordering_system.ViewModels
                          Amount: g.Sum(i => i.MenuItem!.Price * i.Quantity * g.Key)
                      ));
 
-        public string? WaiterName          { get; set; }
+        public string OrderPanelTitle  => SentItems.Any() ? "New Order" : "Current Order";
+        public string? WaiterName      { get; set; }
         public string? ConfirmationMessage { get; set; }
         public string? ErrorMessage        { get; set; }
     }

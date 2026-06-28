@@ -12,5 +12,16 @@ namespace Chapeau_ordering_system.Models
         public DateTime OrderTime { get; set; }
         public DateTime ReadyAt { get; internal set; }
         public DateTime StartedAt { get; internal set; }
+
+        public string StatusBadgeClass => Status switch
+        {
+            OrderItemStatus.Ordered         => "bg-primary",
+            OrderItemStatus.BeingPrepared   => "bg-warning text-dark",
+            OrderItemStatus.ReadyToBeServed => "bg-success",
+            OrderItemStatus.Served          => "bg-secondary",
+            _                               => "bg-secondary"
+        };
+
+        public bool CanBeServed => Status == OrderItemStatus.ReadyToBeServed;
     }
 }
