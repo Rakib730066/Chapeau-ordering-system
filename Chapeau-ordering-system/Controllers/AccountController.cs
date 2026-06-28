@@ -14,7 +14,7 @@ namespace Chapeau_ordering_system.Controllers
         [HttpGet]
         public IActionResult Login() => View();
 
-        [HttpPost]
+        [HttpPost, ValidateAntiForgeryToken]
         public IActionResult Login(LoginViewModel model)
         {
             if (!ModelState.IsValid) return View(model);

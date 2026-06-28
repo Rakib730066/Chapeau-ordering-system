@@ -32,7 +32,7 @@ namespace Chapeau_ordering_system.ViewModels
                      .OrderBy(g => g.Key)
                      .Select(g => (
                          Rate:   g.Key,
-                         Amount: g.Sum(i => i.MenuItem!.Price * i.Quantity * g.Key)
+                         Amount: g.Sum(i => i.MenuItem!.Price * i.Quantity * (g.Key / (100m + g.Key)))
                      ));
 
         public string OrderPanelTitle  => SentItems.Any() ? "New Order" : "Current Order";

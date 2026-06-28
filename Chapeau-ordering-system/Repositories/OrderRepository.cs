@@ -133,14 +133,15 @@ namespace Chapeau_ordering_system.Repositories
                 INNER JOIN dbo.Tables    t ON t.TableId    = o.TableId
                 INNER JOIN dbo.Employees e ON e.EmployeeId = o.EmployeeId
                 WHERE o.TableId = @TableId
-                AND   o.Status  = @open
+                AND   o.Status IN (@open, @submitted)
                 AND   CAST(o.OrderTime AS DATE) = CAST(GETDATE() AS DATE)
                 ORDER BY o.OrderTime DESC";
 
             using var conn = new SqlConnection(_connectionString);
             using var cmd  = new SqlCommand(query, conn);
-            cmd.Parameters.AddWithValue("@TableId", tableId);
-            cmd.Parameters.AddWithValue("@open",    (int)OrderStatus.Open);
+            cmd.Parameters.AddWithValue("@TableId",   tableId);
+            cmd.Parameters.AddWithValue("@open",      (int)OrderStatus.Open);
+            cmd.Parameters.AddWithValue("@submitted", (int)OrderStatus.Submitted);
             conn.Open();
             using var reader = cmd.ExecuteReader();
             return reader.Read() ? MapOrderFromReader(reader) : null;
@@ -332,9 +333,9 @@ namespace Chapeau_ordering_system.Repositories
         public MenuItem? GetMenuItemById(int menuItemId)
         {
             const string query = @"
-        SELECT MenuItemId, Name, Price, Type, Course, Stock
+        SELECT MenuItemId, Name, Price, Type, Course, Stock, IsActive
         FROM dbo.MenuItems
-        WHERE MenuItemId = @MenuItemId";
+        WHERE MenuItemId = @MenuItemId AND IsActive = 1";
 
             using var conn = new SqlConnection(_connectionString);
             using var cmd  = new SqlCommand(query, conn);
@@ -351,7 +352,8 @@ namespace Chapeau_ordering_system.Repositories
                 Price      = reader.GetDecimal(reader.GetOrdinal("Price")),
                 Type       = (MenuItemType)reader.GetInt32(reader.GetOrdinal("Type")),
                 Course     = (CourseType)reader.GetInt32(reader.GetOrdinal("Course")),
-                Stock      = reader.GetInt32(reader.GetOrdinal("Stock"))
+                Stock      = reader.GetInt32(reader.GetOrdinal("Stock")),
+                IsActive   = reader.GetBoolean(reader.GetOrdinal("IsActive"))
             };
         }
 
@@ -389,13 +391,14 @@ namespace Chapeau_ordering_system.Repositories
                 FROM dbo.OrderItems oi
                 INNER JOIN dbo.Orders o ON o.OrderId = oi.OrderId
                 WHERE o.TableId   = @TableId
-                  AND o.Status    = @open
+                  AND o.Status IN (@open, @submitted)
                   AND oi.Status NOT IN (@served, @cancelled)";
 
             using var conn = new SqlConnection(_connectionString);
             using var cmd  = new SqlCommand(query, conn);
             cmd.Parameters.AddWithValue("@TableId",   tableId);
             cmd.Parameters.AddWithValue("@open",      (int)OrderStatus.Open);
+            cmd.Parameters.AddWithValue("@submitted", (int)OrderStatus.Submitted);
             cmd.Parameters.AddWithValue("@served",    (int)OrderItemStatus.Served);
             cmd.Parameters.AddWithValue("@cancelled", (int)OrderItemStatus.Cancelled);
             conn.Open();

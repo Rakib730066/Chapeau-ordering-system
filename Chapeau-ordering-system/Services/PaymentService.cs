@@ -175,13 +175,14 @@ namespace Chapeau_ordering_system.Services
         private List<PersonPaymentViewModel> BuildEqualSplitRows(decimal total, int numberOfPeople)
         {
             decimal share = Math.Round(total / numberOfPeople, 2);
+            decimal lastShare = total - share * (numberOfPeople - 1);
 
             List<PersonPaymentViewModel> rows = new List<PersonPaymentViewModel>();
             for (int i = 0; i < numberOfPeople; i++)
             {
                 rows.Add(new PersonPaymentViewModel
                 {
-                    AmountPaid = share,
+                    AmountPaid = i == numberOfPeople - 1 ? lastShare : share,
                     PaymentMethod = PaymentMethod.Cash
                 });
             }
