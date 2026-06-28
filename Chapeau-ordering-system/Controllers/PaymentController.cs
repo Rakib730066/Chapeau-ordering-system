@@ -118,8 +118,7 @@ namespace Chapeau_ordering_system.Controllers
 
             // Rebuild rows when the people count changes.
             bool isRecalc = Request.Form["action"] == "recalc";
-            bool peopleCountMismatch = refreshed.Mode == SplitMode.Equal
-                                       && refreshed.Payments.Count != refreshed.NumberOfPeople;
+            bool peopleCountMismatch = refreshed.Payments.Count != refreshed.NumberOfPeople;
 
             if (isRecalc || peopleCountMismatch)
             {

@@ -56,46 +56,9 @@ namespace Chapeau_ordering_system.Repositories
             while (reader.Read())
             {
                 if (order == null)
-                {
-                    order = new Order
-                    {
-                        OrderId = reader.GetInt32(reader.GetOrdinal("OrderId")),
-                        OrderTime = reader.GetDateTime(reader.GetOrdinal("OrderTime")),
-                        Status = (OrderStatus)reader.GetInt32(reader.GetOrdinal("Status")),
-                        Table = new RestaurantTable(),
-                        OrderItems = new List<OrderItem>()
-                    };
+                    order = ReadOrder(reader);
 
-                    order.Table.TableId = reader.GetInt32(reader.GetOrdinal("TableId"));
-
-                    int tableNumberOrd = reader.GetOrdinal("TableNumber");
-                    order.Table.TableNumber = reader.IsDBNull(tableNumberOrd)
-                        ? string.Empty
-                        : reader.GetString(tableNumberOrd);
-                }
-
-                MenuItem menuItem = new MenuItem
-                {
-                    MenuItemId = reader.GetInt32(reader.GetOrdinal("MenuItemId")),
-                    Name = reader.GetString(reader.GetOrdinal("Name")),
-                    Price = reader.GetDecimal(reader.GetOrdinal("Price")),
-                    Type = (MenuItemType)reader.GetInt32(reader.GetOrdinal("Type")),
-                    Course = (CourseType)reader.GetInt32(reader.GetOrdinal("Course")),
-                    VatRate = reader.GetDecimal(reader.GetOrdinal("VatRate"))
-                };
-
-                int commentOrd = reader.GetOrdinal("Comment");
-
-                OrderItem orderItem = new OrderItem
-                {
-                    OrderItemId = reader.GetInt32(reader.GetOrdinal("OrderItemId")),
-                    Quantity = reader.GetInt32(reader.GetOrdinal("Quantity")),
-                    Comment = reader.IsDBNull(commentOrd) ? null : reader.GetString(commentOrd),
-                    Status = (OrderItemStatus)reader.GetInt32(reader.GetOrdinal("ItemStatus")),
-                    MenuItem = menuItem
-                };
-
-                order.OrderItems.Add(orderItem);
+                order.OrderItems.Add(ReadOrderItem(reader));
             }
 
             return order;
@@ -110,43 +73,9 @@ namespace Chapeau_ordering_system.Repositories
 
             try
             {
-                string insertPayment = @"
-                    INSERT INTO dbo.Payments
-                        (OrderId, Amount, TipAmount, VatLowAmount, VatHighAmount,
-                         PaymentMethod, Feedback, PaidAt)
-                    VALUES
-                        (@OrderId, @Amount, @TipAmount, @VatLow, @VatHigh,
-                         @Method, @Feedback, @PaidAt)";
-
-                SqlCommand cmd1 = new SqlCommand(insertPayment, conn, transaction);
-                cmd1.Parameters.Add("@OrderId", System.Data.SqlDbType.Int).Value = payment.OrderId;
-                cmd1.Parameters.Add("@Amount", System.Data.SqlDbType.Decimal).Value = payment.Amount;
-                cmd1.Parameters.Add("@TipAmount", System.Data.SqlDbType.Decimal).Value = payment.TipAmount;
-                cmd1.Parameters.Add("@VatLow", System.Data.SqlDbType.Decimal).Value = payment.VatLowAmount;
-                cmd1.Parameters.Add("@VatHigh", System.Data.SqlDbType.Decimal).Value = payment.VatHighAmount;
-                cmd1.Parameters.Add("@Method", System.Data.SqlDbType.Int).Value = (int)payment.PaymentMethod;
-                cmd1.Parameters.Add("@Feedback", System.Data.SqlDbType.NVarChar).Value =
-                    (object?)payment.Feedback ?? DBNull.Value;
-                cmd1.Parameters.Add("@PaidAt", System.Data.SqlDbType.DateTime).Value = payment.PaidAt;
-                cmd1.ExecuteNonQuery();
-
-                SqlCommand cmd2 = new SqlCommand(
-                    "UPDATE dbo.Orders SET Status = @PaidStatus WHERE OrderId = @OrderId",
-                    conn, transaction);
-                cmd2.Parameters.Add("@PaidStatus", System.Data.SqlDbType.Int).Value = (int)OrderStatus.Paid;
-                cmd2.Parameters.Add("@OrderId", System.Data.SqlDbType.Int).Value = payment.OrderId;
-                cmd2.ExecuteNonQuery();
-
-                SqlCommand cmd3 = new SqlCommand(@"
-                    UPDATE dbo.Tables
-                    SET Status = 0,
-                        CurrentOrderId = NULL,
-                        OccupiedSince = NULL,
-                        LastUpdated = SYSUTCDATETIME()
-                    WHERE TableId = (SELECT TableId FROM dbo.Orders WHERE OrderId = @OrderId)",
-                    conn, transaction);
-                cmd3.Parameters.Add("@OrderId", System.Data.SqlDbType.Int).Value = payment.OrderId;
-                cmd3.ExecuteNonQuery();
+                InsertPayment(conn, transaction, payment);
+                MarkOrderPaid(conn, transaction, payment.OrderId);
+                FreeTable(conn, transaction, payment.OrderId);
 
                 transaction.Commit();
             }
@@ -172,45 +101,10 @@ namespace Chapeau_ordering_system.Repositories
             try
             {
                 foreach (Payment payment in payments)
-                {
-                    string insertPayment = @"
-                        INSERT INTO dbo.Payments
-                            (OrderId, Amount, TipAmount, VatLowAmount, VatHighAmount,
-                             PaymentMethod, Feedback, PaidAt)
-                        VALUES
-                            (@OrderId, @Amount, @TipAmount, @VatLow, @VatHigh,
-                             @Method, @Feedback, @PaidAt)";
+                    InsertPayment(conn, transaction, payment);
 
-                    SqlCommand cmd = new SqlCommand(insertPayment, conn, transaction);
-                    cmd.Parameters.Add("@OrderId", System.Data.SqlDbType.Int).Value = payment.OrderId;
-                    cmd.Parameters.Add("@Amount", System.Data.SqlDbType.Decimal).Value = payment.Amount;
-                    cmd.Parameters.Add("@TipAmount", System.Data.SqlDbType.Decimal).Value = payment.TipAmount;
-                    cmd.Parameters.Add("@VatLow", System.Data.SqlDbType.Decimal).Value = payment.VatLowAmount;
-                    cmd.Parameters.Add("@VatHigh", System.Data.SqlDbType.Decimal).Value = payment.VatHighAmount;
-                    cmd.Parameters.Add("@Method", System.Data.SqlDbType.Int).Value = (int)payment.PaymentMethod;
-                    cmd.Parameters.Add("@Feedback", System.Data.SqlDbType.NVarChar).Value =
-                        (object?)payment.Feedback ?? DBNull.Value;
-                    cmd.Parameters.Add("@PaidAt", System.Data.SqlDbType.DateTime).Value = payment.PaidAt;
-                    cmd.ExecuteNonQuery();
-                }
-
-                SqlCommand markPaid = new SqlCommand(
-                    "UPDATE dbo.Orders SET Status = @Paid WHERE OrderId = @OrderId",
-                    conn, transaction);
-                markPaid.Parameters.Add("@Paid", System.Data.SqlDbType.Int).Value = (int)OrderStatus.Paid;
-                markPaid.Parameters.Add("@OrderId", System.Data.SqlDbType.Int).Value = orderId;
-                markPaid.ExecuteNonQuery();
-
-                SqlCommand freeTable = new SqlCommand(@"
-                    UPDATE dbo.Tables
-                    SET Status = 0,
-                        CurrentOrderId = NULL,
-                        OccupiedSince = NULL,
-                        LastUpdated = SYSUTCDATETIME()
-                    WHERE TableId = (SELECT TableId FROM dbo.Orders WHERE OrderId = @OrderId)",
-                    conn, transaction);
-                freeTable.Parameters.Add("@OrderId", System.Data.SqlDbType.Int).Value = orderId;
-                freeTable.ExecuteNonQuery();
+                MarkOrderPaid(conn, transaction, orderId);
+                FreeTable(conn, transaction, orderId);
 
                 transaction.Commit();
             }
@@ -245,7 +139,7 @@ namespace Chapeau_ordering_system.Repositories
             using SqlConnection conn = new SqlConnection(_connectionString);
             using SqlCommand cmd = new SqlCommand(query, conn);
             cmd.Parameters.Add("@Start", System.Data.SqlDbType.DateTime).Value = startDate.Date;
-            cmd.Parameters.Add("@End",   System.Data.SqlDbType.DateTime).Value = endDate.Date.AddDays(1);
+            cmd.Parameters.Add("@End", System.Data.SqlDbType.DateTime).Value = endDate.Date.AddDays(1);
             conn.Open();
             using SqlDataReader reader = cmd.ExecuteReader();
             while (reader.Read())
@@ -253,16 +147,16 @@ namespace Chapeau_ordering_system.Repositories
                 decimal rev = reader.GetDecimal(reader.GetOrdinal("TotalRevenue"));
                 decimal tip = reader.GetDecimal(reader.GetOrdinal("TotalTip"));
                 vm.TotalRevenue += rev;
-                vm.TotalTip     += tip;
-                vm.TotalVatLow  += reader.GetDecimal(reader.GetOrdinal("TotalVatLow"));
+                vm.TotalTip += tip;
+                vm.TotalVatLow += reader.GetDecimal(reader.GetOrdinal("TotalVatLow"));
                 vm.TotalVatHigh += reader.GetDecimal(reader.GetOrdinal("TotalVatHigh"));
-                vm.TotalOrders  += reader.GetInt32(reader.GetOrdinal("TotalOrders"));
+                vm.TotalOrders += reader.GetInt32(reader.GetOrdinal("TotalOrders"));
                 vm.DailyBreakdown.Add(new DailyRevenueLine
                 {
-                    Date    = reader.GetDateTime(reader.GetOrdinal("PayDate")),
+                    Date = reader.GetDateTime(reader.GetOrdinal("PayDate")),
                     Revenue = rev,
-                    Tip     = tip,
-                    Orders  = reader.GetInt32(reader.GetOrdinal("TotalOrders"))
+                    Tip = tip,
+                    Orders = reader.GetInt32(reader.GetOrdinal("TotalOrders"))
                 });
             }
             reader.Close();
@@ -278,18 +172,117 @@ namespace Chapeau_ordering_system.Repositories
 
             using SqlCommand cmd2 = new SqlCommand(cardQuery, conn);
             cmd2.Parameters.Add("@Start", System.Data.SqlDbType.DateTime).Value = startDate.Date;
-            cmd2.Parameters.Add("@End",   System.Data.SqlDbType.DateTime).Value = endDate.Date.AddDays(1);
+            cmd2.Parameters.Add("@End", System.Data.SqlDbType.DateTime).Value = endDate.Date.AddDays(1);
             using SqlDataReader r2 = cmd2.ExecuteReader();
             while (r2.Read())
             {
                 int card = r2.GetInt32(0);
                 decimal rev = r2.GetDecimal(1);
-                if (card == (int)CardType.Lunch)  vm.LunchRevenue  = rev;
+                if (card == (int)CardType.Lunch) vm.LunchRevenue = rev;
                 if (card == (int)CardType.Dinner) vm.DinnerRevenue = rev;
                 if (card == (int)CardType.Drinks) vm.DrinksRevenue = rev;
             }
 
             return vm;
+        }
+
+        // --- private helpers ---
+
+        // Builds the Order object from the current row (only called once, for the first row).
+        private Order ReadOrder(SqlDataReader reader)
+        {
+            Order order = new Order
+            {
+                OrderId = reader.GetInt32(reader.GetOrdinal("OrderId")),
+                OrderTime = reader.GetDateTime(reader.GetOrdinal("OrderTime")),
+                Status = (OrderStatus)reader.GetInt32(reader.GetOrdinal("Status")),
+                Table = new RestaurantTable(),
+                OrderItems = new List<OrderItem>()
+            };
+
+            order.Table.TableId = reader.GetInt32(reader.GetOrdinal("TableId"));
+
+            int tableNumberOrd = reader.GetOrdinal("TableNumber");
+            order.Table.TableNumber = reader.IsDBNull(tableNumberOrd)
+                ? string.Empty
+                : reader.GetString(tableNumberOrd);
+
+            return order;
+        }
+
+        // Builds one OrderItem (with its MenuItem) from the current row.
+        private OrderItem ReadOrderItem(SqlDataReader reader)
+        {
+            MenuItem menuItem = new MenuItem
+            {
+                MenuItemId = reader.GetInt32(reader.GetOrdinal("MenuItemId")),
+                Name = reader.GetString(reader.GetOrdinal("Name")),
+                Price = reader.GetDecimal(reader.GetOrdinal("Price")),
+                Type = (MenuItemType)reader.GetInt32(reader.GetOrdinal("Type")),
+                Course = (CourseType)reader.GetInt32(reader.GetOrdinal("Course")),
+                VatRate = reader.GetDecimal(reader.GetOrdinal("VatRate"))
+            };
+
+            int commentOrd = reader.GetOrdinal("Comment");
+
+            return new OrderItem
+            {
+                OrderItemId = reader.GetInt32(reader.GetOrdinal("OrderItemId")),
+                Quantity = reader.GetInt32(reader.GetOrdinal("Quantity")),
+                Comment = reader.IsDBNull(commentOrd) ? null : reader.GetString(commentOrd),
+                Status = (OrderItemStatus)reader.GetInt32(reader.GetOrdinal("ItemStatus")),
+                MenuItem = menuItem
+            };
+        }
+
+        // Inserts one payment row using the given connection + transaction.
+        private void InsertPayment(SqlConnection conn, SqlTransaction transaction, Payment payment)
+        {
+            string insertPayment = @"
+                INSERT INTO dbo.Payments
+                    (OrderId, Amount, TipAmount, VatLowAmount, VatHighAmount,
+                     PaymentMethod, Feedback, PaidAt)
+                VALUES
+                    (@OrderId, @Amount, @TipAmount, @VatLow, @VatHigh,
+                     @Method, @Feedback, @PaidAt)";
+
+            SqlCommand cmd = new SqlCommand(insertPayment, conn, transaction);
+            cmd.Parameters.Add("@OrderId", System.Data.SqlDbType.Int).Value = payment.OrderId;
+            cmd.Parameters.Add("@Amount", System.Data.SqlDbType.Decimal).Value = payment.Amount;
+            cmd.Parameters.Add("@TipAmount", System.Data.SqlDbType.Decimal).Value = payment.TipAmount;
+            cmd.Parameters.Add("@VatLow", System.Data.SqlDbType.Decimal).Value = payment.VatLowAmount;
+            cmd.Parameters.Add("@VatHigh", System.Data.SqlDbType.Decimal).Value = payment.VatHighAmount;
+            cmd.Parameters.Add("@Method", System.Data.SqlDbType.Int).Value = (int)payment.PaymentMethod;
+            cmd.Parameters.Add("@Feedback", System.Data.SqlDbType.NVarChar).Value =
+                (object?)payment.Feedback ?? DBNull.Value;
+            cmd.Parameters.Add("@PaidAt", System.Data.SqlDbType.DateTime).Value = payment.PaidAt;
+            cmd.ExecuteNonQuery();
+        }
+
+        // Marks the order as paid.
+        private void MarkOrderPaid(SqlConnection conn, SqlTransaction transaction, int orderId)
+        {
+            SqlCommand cmd = new SqlCommand(
+                "UPDATE dbo.Orders SET Status = @PaidStatus WHERE OrderId = @OrderId",
+                conn, transaction);
+            cmd.Parameters.Add("@PaidStatus", System.Data.SqlDbType.Int).Value = (int)OrderStatus.Paid;
+            cmd.Parameters.Add("@OrderId", System.Data.SqlDbType.Int).Value = orderId;
+            cmd.ExecuteNonQuery();
+        }
+
+        // Frees the table linked to the order.
+        private void FreeTable(SqlConnection conn, SqlTransaction transaction, int orderId)
+        {
+            SqlCommand cmd = new SqlCommand(@"
+                UPDATE dbo.Tables
+                SET Status = 0,
+                    CurrentOrderId = NULL,
+                    OccupiedSince = NULL,
+                    LastUpdated = SYSUTCDATETIME()
+                WHERE TableId = (SELECT TableId FROM dbo.Orders WHERE OrderId = @OrderId)",
+                conn, transaction);
+            cmd.Parameters.Add("@OrderId", System.Data.SqlDbType.Int).Value = orderId;
+            cmd.ExecuteNonQuery();
         }
     }
 }

@@ -93,9 +93,18 @@ namespace Chapeau_ordering_system.Services
 
         public SplitPaymentViewModel RebuildEqualSplit(SplitPaymentViewModel input)
         {
-            if (input.Mode == SplitMode.Equal && input.NumberOfPeople >= DefaultNumberOfPeople)
+            if (input.NumberOfPeople < DefaultNumberOfPeople)
+                input.NumberOfPeople = DefaultNumberOfPeople;
+
+            if (input.Mode == SplitMode.Equal)
             {
+                // Equal mode: each row pre-filled with the divided share.
                 input.Payments = BuildEqualSplitRows(input.TotalToPay, input.NumberOfPeople);
+            }
+            else
+            {
+                // Custom mode: blank rows — each person types their own amount.
+                input.Payments = BuildCustomSplitRows(input.NumberOfPeople);
             }
 
             return input;
@@ -154,10 +163,8 @@ namespace Chapeau_ordering_system.Services
             return (true, null);
         }
 
-
         // --- private helpers ---
 
-       
         private decimal CalculateTip(FinishOrderViewModel input, decimal billTotal)
         {
             decimal tip;
@@ -182,6 +189,21 @@ namespace Chapeau_ordering_system.Services
                 rows.Add(new PersonPaymentViewModel
                 {
                     AmountPaid = share,
+                    PaymentMethod = PaymentMethod.Cash
+                });
+            }
+
+            return rows;
+        }
+
+        private List<PersonPaymentViewModel> BuildCustomSplitRows(int numberOfPeople)
+        {
+            List<PersonPaymentViewModel> rows = new List<PersonPaymentViewModel>();
+            for (int i = 0; i < numberOfPeople; i++)
+            {
+                rows.Add(new PersonPaymentViewModel
+                {
+                    AmountPaid = 0m,
                     PaymentMethod = PaymentMethod.Cash
                 });
             }
