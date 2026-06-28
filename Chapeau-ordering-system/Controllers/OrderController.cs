@@ -155,6 +155,20 @@ namespace Chapeau_ordering_system.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
+        public IActionResult MarkBeingPrepared(int orderItemId, int tableId)
+        {
+            if (WaiterGuard() is { } r) return r;
+            try
+            {
+                string name = _orderService.GetItemNameByOrderItemId(orderItemId);
+                _orderService.MarkItemBeingPrepared(orderItemId);
+                SetSuccess($"'{name}' marked as being prepared.");
+            }
+            catch (InvalidOperationException ex) { SetError(ex.Message); }
+            return RedirectToAction(nameof(TakeOrder), new { tableId });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
         public IActionResult MarkServed(int orderItemId, int tableId)
         {
             if (WaiterGuard() is { } r) return r;
