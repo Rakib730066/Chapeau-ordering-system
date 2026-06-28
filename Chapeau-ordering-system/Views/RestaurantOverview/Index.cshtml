@@ -142,7 +142,13 @@
                         }
                         else if (table.IsReserved)
                         {
-                            <p class="text-muted small mb-0">Table is reserved.</p>
+                            <p class="text-muted small mb-0">
+                                Reserved
+                                @if (!string.IsNullOrWhiteSpace(table.ReservationName))
+                                {
+                                    <span>for <strong>@table.ReservationName</strong></span>
+                                }
+                            </p>
                         }
                         else if (table.IsCleaning)
                         {
@@ -168,6 +174,8 @@
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="tableId" value="@table.TableId" />
                                     <input type="hidden" name="newStatus" value="@((int)TableStatus.Reserved)" />
+                                    <input type="text" name="reservationName" placeholder="Guest name (optional)"
+                                           class="form-control form-control-sm mb-1" maxlength="100" />
                                     <button type="submit" class="btn btn-sm btn-outline-warning w-100">Mark Reserved</button>
                                 </form>
                                 <form asp-controller="RestaurantOverview" asp-action="ChangeStatus" method="post">

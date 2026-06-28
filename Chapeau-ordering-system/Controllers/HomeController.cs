@@ -21,16 +21,7 @@ namespace Chapeau_ordering_system.Controllers
 
         public IActionResult Index()
         {
-            string? employeeRole = HttpContext.Session.GetString("EmployeeRole");
-            ViewData["EmployeeRole"] = employeeRole;
-
-            var model = new RestaurantOverviewViewModel
-            {
-                Tables = _tableService.GetAllTables(),
-                OpenOrders = _orderService.GetOpenOrders()
-            };
-
-            return View(model);
+            return RedirectToAction("Index", "RestaurantOverview");
         }
 
         public IActionResult Privacy()

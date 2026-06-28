@@ -8,7 +8,7 @@ namespace Chapeau_ordering_system.Repositories
     public class TableRepository : ITableRepository
     {
         private readonly string _connectionString;
-        private const string SelectColumns = "TableId, TableNumber, NumberOfSeats, Status, CurrentOrderId, OccupiedSince, LastUpdated, Area, IsActive";
+        private const string SelectColumns = "TableId, TableNumber, NumberOfSeats, Status, CurrentOrderId, OccupiedSince, LastUpdated, Area, IsActive, ReservationName";
 
         public TableRepository(IConfiguration configuration)
         {
@@ -51,11 +51,12 @@ namespace Chapeau_ordering_system.Repositories
             }
         }
 
-        public void UpdateStatus(int id, TableStatus status, int? currentOrderId = null)
+        public void UpdateStatus(int id, TableStatus status, int? currentOrderId = null, string? reservationName = null)
         {
             const string query = @"UPDATE dbo.Tables
                                    SET Status = @status,
                                        CurrentOrderId = @orderId,
+                                       ReservationName = @reservationName,
                                        LastUpdated = SYSUTCDATETIME(),
                                        OccupiedSince = CASE
                                            WHEN @status = 1 THEN ISNULL(OccupiedSince, SYSUTCDATETIME())
@@ -68,6 +69,7 @@ namespace Chapeau_ordering_system.Repositories
                 using var cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@status", (int)status);
                 cmd.Parameters.AddWithValue("@orderId", (object?)currentOrderId ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@reservationName", (object?)reservationName ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@id", id);
                 conn.Open();
                 cmd.ExecuteNonQuery();
@@ -90,7 +92,8 @@ namespace Chapeau_ordering_system.Repositories
                 OccupiedSince = reader.IsDBNull(reader.GetOrdinal("OccupiedSince")) ? null : reader.GetDateTime(reader.GetOrdinal("OccupiedSince")),
                 LastUpdated   = reader.GetDateTime(reader.GetOrdinal("LastUpdated")),
                 Area          = reader.IsDBNull(reader.GetOrdinal("Area")) ? null : reader.GetString(reader.GetOrdinal("Area")),
-                IsActive      = reader.GetBoolean(reader.GetOrdinal("IsActive"))
+                IsActive        = reader.GetBoolean(reader.GetOrdinal("IsActive")),
+                ReservationName = reader.IsDBNull(reader.GetOrdinal("ReservationName")) ? null : reader.GetString(reader.GetOrdinal("ReservationName"))
             };
         }
     }

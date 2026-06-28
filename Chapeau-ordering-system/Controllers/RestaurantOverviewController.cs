@@ -31,16 +31,18 @@ namespace Chapeau_ordering_system.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
-        public IActionResult ChangeStatus(int tableId, int newStatus)
+        public IActionResult ChangeStatus(int tableId, int newStatus, string? reservationName = null)
         {
             if (AuthGuard() is { } r) return r;
-            var status = (TableStatus)newStatus;
-            if (status == TableStatus.Free && _orderService.TableHasUnservedItems(tableId))
+            try
             {
-                SetError("Cannot mark table as free — it still has unserved items.");
-                return OverviewRedirect();
+                var status = (TableStatus)newStatus;
+                if (status == TableStatus.Free)
+                    _tableService.MarkFree(tableId);
+                else
+                    _tableService.UpdateStatus(tableId, status, reservationName: reservationName?.Trim());
             }
-            _tableService.UpdateStatus(tableId, status);
+            catch (InvalidOperationException ex) { SetError(ex.Message); }
             return OverviewRedirect();
         }
 
